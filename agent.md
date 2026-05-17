@@ -13,6 +13,7 @@
 - Keep `genres.csv` as the full list for that year, even when scraping only selected genres.
 - For heavier scrapers, always include visible progress output so long-running work does not look stalled.
 - Prefer progress at the unit the user can reason about, such as genre count and shop count.
+- Commit and push CSV progress in small checkpoints when new genre files have been generated.
 - Keep CSV columns stable for My Maps imports unless there is a clear migration reason.
 
 ## Current commands

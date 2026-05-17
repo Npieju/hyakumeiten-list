@@ -7,10 +7,10 @@
 ## セットアップ
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+環境によっては `python3 -m venv` や `ensurepip` が使えない場合があります。その場合は、利用可能な Python 環境で `requests` と `beautifulsoup4` を導入してください。
 
 ## 2025年のジャンル一覧だけ作る
 
@@ -25,7 +25,7 @@ python3 scripts/scrape_hyakumeiten.py --year 2025 --genres-only
 ## 2025年の全ジャンルCSVを作る
 
 ```bash
-python3 scripts/scrape_hyakumeiten.py --year 2025
+python3 scripts/scrape_hyakumeiten.py --year 2025 --throttle-seconds 0 --workers 4
 ```
 
 出力先:
@@ -46,14 +46,9 @@ Google My Maps 向けに、各店舗 CSV には以下を含めます。
 - `Genre Slug`
 - `Release Date`
 
-## GitHub リポジトリ化
+## 主なオプション
 
-このディレクトリはローカルで `git init` 済みです。GitHub 側のリモート作成は手元の認証が必要です。
-
-```bash
-git branch -M main
-git add .
-git commit -m "Initial scraper for Tabelog Hyakumeiten 2025"
-git remote add origin <your-repo-url>
-git push -u origin main
-```
+- `--genre <slug>`: 特定ジャンルだけ出力
+- `--genres-only`: ジャンル一覧だけ出力
+- `--throttle-seconds <float>`: リクエスト間の待機秒数
+- `--workers <int>`: 店舗詳細の並列取得数

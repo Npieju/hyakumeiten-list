@@ -6,6 +6,7 @@ import json
 import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -204,6 +205,7 @@ def scrape_genre_shops(
     session: requests.Session,
     genre: Genre,
     throttle_seconds: float,
+    workers: int,
 ) -> list[Shop]:
     print_progress(f"loading genre page: {genre.slug}")
     soup = fetch_soup(session, genre.url)
@@ -216,17 +218,36 @@ def scrape_genre_shops(
             seen_links.add(shop_url)
             shop_links.append(shop_url)
 
-    shops: list[Shop] = []
     total_shops = len(shop_links)
     print_progress(f"found {total_shops} shops for {genre.slug}")
-    for index, shop_url in enumerate(shop_links, start=1):
-        if index == 1 or index == total_shops or index % 10 == 0:
-            print_progress(f"fetching {genre.slug} shop {index}/{total_shops}")
-        shops.append(fetch_shop(session, genre, shop_url))
-        if throttle_seconds > 0:
-            time.sleep(throttle_seconds)
+    if workers <= 1:
+        shops: list[Shop] = []
+        for index, shop_url in enumerate(shop_links, start=1):
+            if index == 1 or index == total_shops or index % 10 == 0:
+                print_progress(f"fetching {genre.slug} shop {index}/{total_shops}")
+            shops.append(fetch_shop(session, genre, shop_url))
+            if throttle_seconds > 0:
+                time.sleep(throttle_seconds)
+        return shops
 
-    return shops
+    indexed_shops: list[tuple[int, Shop]] = []
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        future_to_index = {
+            executor.submit(fetch_shop, session, genre, shop_url): index
+            for index, shop_url in enumerate(shop_links, start=1)
+        }
+        completed = 0
+        for future in as_completed(future_to_index):
+            index = future_to_index[future]
+            indexed_shops.append((index, future.result()))
+            completed += 1
+            if completed == 1 or completed == total_shops or completed % 10 == 0:
+                print_progress(f"fetched {genre.slug} shop {completed}/{total_shops}")
+            if throttle_seconds > 0:
+                time.sleep(throttle_seconds)
+
+    indexed_shops.sort(key=lambda item: item[0])
+    return [shop for _, shop in indexed_shops]
 
 
 def write_csv(path: Path, rows: Iterable[dict[str, str | int]], fieldnames: list[str]) -> None:
@@ -271,6 +292,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--genres-only", action="store_true")
     parser.add_argument("--genre", dest="genre_slugs", action="append")
     parser.add_argument("--throttle-seconds", type=float, default=0.3)
+    parser.add_argument("--workers", type=int, default=4)
     return parser.parse_args()
 
 
@@ -310,7 +332,12 @@ def main() -> None:
     total_genres = len(genres)
     for index, genre in enumerate(genres, start=1):
         print_progress(f"scraping genre {index}/{total_genres}: {genre.slug}")
-        shops = scrape_genre_shops(session, genre, args.throttle_seconds)
+        shops = scrape_genre_shops(
+            session,
+            genre,
+            args.throttle_seconds,
+            max(1, args.workers),
+        )
         all_shops.extend(shops)
         write_csv(
             output_root / "by_genre" / f"{genre.slug}.csv",
