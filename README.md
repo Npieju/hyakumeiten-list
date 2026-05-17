@@ -1,4 +1,4 @@
-# hyakummeiten-list
+# hyakumeiten-list
 
 食べログ 百名店を年別・ジャンル別の CSV に整形して、Google My Maps に取り込みやすくするためのスクレイパーです。
 
