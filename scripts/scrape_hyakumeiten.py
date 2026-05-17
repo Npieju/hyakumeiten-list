@@ -176,8 +176,16 @@ def build_google_maps_url(address: str, name: str) -> str:
     return f"https://www.google.com/maps/search/?api=1&query={query}"
 
 
-def fetch_shop(session: requests.Session, genre: Genre, shop_url: str) -> Shop:
-    soup = fetch_soup(session, shop_url)
+def fetch_shop(session: requests.Session, genre: Genre, shop_url: str) -> Shop | None:
+    try:
+        soup = fetch_soup(session, shop_url)
+    except requests.HTTPError as error:
+        status_code = error.response.status_code if error.response is not None else None
+        if status_code == 404:
+            print_progress(f"skipping missing shop page: {shop_url}")
+            return None
+        raise
+
     name, address = parse_restaurant_json_ld(soup)
 
     if not name:
@@ -219,15 +227,22 @@ def scrape_genre_shops(
             shop_links.append(shop_url)
 
     total_shops = len(shop_links)
+    skipped_shops = 0
     print_progress(f"found {total_shops} shops for {genre.slug}")
     if workers <= 1:
         shops: list[Shop] = []
         for index, shop_url in enumerate(shop_links, start=1):
             if index == 1 or index == total_shops or index % 10 == 0:
                 print_progress(f"fetching {genre.slug} shop {index}/{total_shops}")
-            shops.append(fetch_shop(session, genre, shop_url))
+            shop = fetch_shop(session, genre, shop_url)
+            if shop is None:
+                skipped_shops += 1
+            else:
+                shops.append(shop)
             if throttle_seconds > 0:
                 time.sleep(throttle_seconds)
+        if skipped_shops > 0:
+            print_progress(f"skipped {skipped_shops} missing shops for {genre.slug}")
         return shops
 
     indexed_shops: list[tuple[int, Shop]] = []
@@ -239,13 +254,19 @@ def scrape_genre_shops(
         completed = 0
         for future in as_completed(future_to_index):
             index = future_to_index[future]
-            indexed_shops.append((index, future.result()))
+            shop = future.result()
+            if shop is None:
+                skipped_shops += 1
+            else:
+                indexed_shops.append((index, shop))
             completed += 1
             if completed == 1 or completed == total_shops or completed % 10 == 0:
                 print_progress(f"fetched {genre.slug} shop {completed}/{total_shops}")
             if throttle_seconds > 0:
                 time.sleep(throttle_seconds)
 
+    if skipped_shops > 0:
+        print_progress(f"skipped {skipped_shops} missing shops for {genre.slug}")
     indexed_shops.sort(key=lambda item: item[0])
     return [shop for _, shop in indexed_shops]
 
