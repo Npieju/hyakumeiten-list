@@ -3,3 +3,4 @@ venv/
 __pycache__/
 .pytest_cache/
 get-pip.py
+data/*/selected.csv

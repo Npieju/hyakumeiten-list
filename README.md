@@ -34,6 +34,21 @@ python3 scripts/scrape_hyakumeiten.py --year 2025 --throttle-seconds 0 --workers
 - `data/2025/all.csv`
 - `data/2025/by_genre/*.csv`
 
+## popular寄りの統合CSVを作る
+
+ラーメン、寿司、焼肉、日本料理、居酒屋をまとめた My Maps 向けの統合 CSV を作れます。
+
+```bash
+python3 scripts/build_popular_csv.py --year 2025
+```
+
+出力先:
+
+- `data/2025/all.csv`
+- `data/2025/popular.csv`
+
+このコマンドは `data/2025/by_genre/*.csv` から `all.csv` と `popular.csv` を再構築します。
+
 Google My Maps 向けに、各店舗 CSV には以下を含めます。
 
 - `Name`
@@ -52,3 +67,11 @@ Google My Maps 向けに、各店舗 CSV には以下を含めます。
 - `--genres-only`: ジャンル一覧だけ出力
 - `--throttle-seconds <float>`: リクエスト間の待機秒数
 - `--workers <int>`: 店舗詳細の並列取得数
+
+`--genre` を指定した実行では、結合結果は `data/<year>/selected.csv` に出力されます。`all.csv` を維持したい場合は `python3 scripts/build_popular_csv.py --year <year>` で再構築してください。
+
+## My Maps向けの使い分け
+
+- 全件を入れたい場合は `data/2025/all.csv`
+- 人気寄りだけを入れたい場合は `data/2025/popular.csv`
+- ジャンルごとに色分けしたい場合は `data/2025/by_genre/*.csv`

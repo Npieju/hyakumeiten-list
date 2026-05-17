@@ -350,6 +350,7 @@ def main() -> None:
         )
 
     all_shops: list[Shop] = []
+    combined_output_name = "selected.csv" if args.genre_slugs else "all.csv"
     total_genres = len(genres)
     for index, genre in enumerate(genres, start=1):
         print_progress(f"scraping genre {index}/{total_genres}: {genre.slug}")
@@ -378,7 +379,7 @@ def main() -> None:
         print(f"Wrote {len(shops)} shops for {genre.slug}")
 
     write_csv(
-        output_root / "all.csv",
+        output_root / combined_output_name,
         shop_rows(all_shops),
         [
             "Name",
@@ -392,7 +393,7 @@ def main() -> None:
             "Release Date",
         ],
     )
-    print(f"Wrote {len(all_shops)} shops to {output_root / 'all.csv'}")
+    print(f"Wrote {len(all_shops)} shops to {output_root / combined_output_name}")
 
 
 if __name__ == "__main__":
