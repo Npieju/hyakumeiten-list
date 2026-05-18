@@ -53,6 +53,8 @@ python3 scripts/build_region_csv.py --year 2025
 
 このコマンドは `data/2025/by_genre/*.csv` から `all.csv` と地域別 CSV を再構築します。
 
+住所が取れない店舗は `data/<year>/by_region/unknown.csv` に入ります。
+
 地域の分け方は次の 5 区分です。
 
 - `tohoku_hokkaido`: 東北北海道
@@ -87,3 +89,21 @@ Google My Maps 向けに、各店舗 CSV には以下を含めます。
 - 全件を入れたい場合は `data/2025/all.csv`
 - 地域ごとに分けたい場合は `data/2025/by_region/*.csv`
 - ジャンルごとに色分けしたい場合は `data/2025/by_genre/*.csv`
+
+## 全年度の統合CSVを作る
+
+年を跨いだ全件 CSV と地域別 CSV を作れます。
+
+```bash
+python3 scripts/build_all_years_csv.py
+```
+
+出力先:
+
+- `data/all_years/all.csv`
+- `data/all_years/by_region/tohoku_hokkaido.csv`
+- `data/all_years/by_region/kanto.csv`
+- `data/all_years/by_region/chubu.csv`
+- `data/all_years/by_region/kansai.csv`
+- `data/all_years/by_region/chugoku_shikoku_kyushu.csv`
+- `data/all_years/by_region/unknown.csv`
