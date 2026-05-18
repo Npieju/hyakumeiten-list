@@ -21,6 +21,7 @@ HYAKUMEITEN_ROOT = f"{BASE_URL}/hyakumeiten"
 
 ADDRESS_OVERRIDES = {
     "https://tabelog.com/tokyo/A1303/A130302/13154404/": "東京都豊島区南大塚1-50-5 コーポ大塚マンション 1F",
+    "https://tabelog.com/hokkaido/A0104/A010401/1001167/": "北海道旭川市東5条11丁目2-1",
 }
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) "
@@ -343,6 +344,7 @@ def fetch_shop(
     if not address:
         address_node = soup.select_one(".rstinfo-table__address")
         address = address_node.get_text("", strip=True) if address_node else ""
+    address = ADDRESS_OVERRIDES.get(shop_link.url, address)
 
     description = f"食べログ {genre.title} 百名店 {genre.year}"
     return (
