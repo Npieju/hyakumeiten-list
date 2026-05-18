@@ -53,6 +53,12 @@ def aggregate_description(row: dict[str, str]) -> str:
     return f"食べログ 百名店: {years} / {genres}".strip()
 
 
+def coordinates_match(current: str, candidate: str) -> bool:
+    if not current or not candidate:
+        return True
+    return current == candidate
+
+
 def main() -> None:
     args = parse_args()
     input_root = Path(args.input_dir)
@@ -107,6 +113,15 @@ def main() -> None:
                         aggregated_row.get("Google Maps URL", ""),
                         row.get("Google Maps URL", ""),
                     )
+                    for column in ("Latitude", "Longitude"):
+                        current_value = aggregated_row.get(column, "")
+                        candidate_value = row.get(column, "")
+                        if not coordinates_match(current_value, candidate_value):
+                            raise SystemExit(
+                                f"Coordinate mismatch for {website} in {source_path}: "
+                                f"{column} {current_value!r} != {candidate_value!r}"
+                            )
+                        aggregated_row[column] = prefer_value(current_value, candidate_value)
                     for column in ("Year", "Genre", "Genre Slug", "Release Date"):
                         aggregated_row[column] = update_unique_values(
                             aggregated_row.get(column, ""),

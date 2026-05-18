@@ -23,6 +23,10 @@ ADDRESS_OVERRIDES = {
     "https://tabelog.com/tokyo/A1303/A130302/13154404/": "東京都豊島区南大塚1-50-5 コーポ大塚マンション 1F",
     "https://tabelog.com/hokkaido/A0104/A010401/1001167/": "北海道旭川市東5条11丁目2-1",
 }
+COORDINATE_OVERRIDES = {
+    "https://tabelog.com/tokyo/A1303/A130302/13154404/": (35.7317076, 139.7292447),
+    "https://tabelog.com/hokkaido/A0104/A010401/1001167/": (43.7801047, 142.3772754),
+}
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -72,6 +76,8 @@ class Shop:
     description: str
     website: str
     google_maps_url: str
+    latitude: str
+    longitude: str
     year: int
     genre: str
     genre_slug: str
@@ -199,7 +205,7 @@ def resolve_genres(session: requests.Session, year: int) -> list[Genre]:
     return sorted(genres, key=lambda genre: genre.slug)
 
 
-def parse_restaurant_json_ld(soup: BeautifulSoup) -> tuple[str, str]:
+def parse_restaurant_json_ld(soup: BeautifulSoup) -> tuple[str, str, str, str]:
     for script in soup.select('script[type="application/ld+json"]'):
         raw_text = script.string or script.get_text(strip=True)
         if not raw_text:
@@ -237,10 +243,27 @@ def parse_restaurant_json_ld(soup: BeautifulSoup) -> tuple[str, str]:
                 str(address_payload.get(key, "")).strip()
                 for key in ("addressRegion", "addressLocality", "streetAddress")
             )
+            geo_payload = restaurant.get("geo") or {}
+            if not isinstance(geo_payload, dict):
+                geo_payload = {}
+            latitude = str(geo_payload.get("latitude", "")).strip()
+            longitude = str(geo_payload.get("longitude", "")).strip()
             if name and address:
-                return name, address
+                return name, address, latitude, longitude
 
-    return "", ""
+    return "", "", "", ""
+
+
+def format_coordinate(value: object) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    if not text:
+        return ""
+    try:
+        return f"{float(text):.7f}"
+    except ValueError:
+        return text
 
 
 def build_google_maps_url(address: str, name: str) -> str:
@@ -307,6 +330,7 @@ def fetch_shop(
         status_code = error.response.status_code if error.response is not None else None
         if status_code == 404:
             print_progress(f"including unavailable shop page as fallback row: {shop_link.url}")
+            latitude, longitude = COORDINATE_OVERRIDES.get(shop_link.url, ("", ""))
             return (
                 Shop(
                     name=shop_link.listed_name,
@@ -317,6 +341,8 @@ def fetch_shop(
                         ADDRESS_OVERRIDES.get(shop_link.url, shop_link.listed_area),
                         shop_link.listed_name,
                     ),
+                    latitude=format_coordinate(latitude),
+                    longitude=format_coordinate(longitude),
                     year=genre.year,
                     genre=genre.title,
                     genre_slug=genre.slug,
@@ -336,7 +362,7 @@ def fetch_shop(
             )
         raise
 
-    name, address = parse_restaurant_json_ld(soup)
+    name, address, latitude, longitude = parse_restaurant_json_ld(soup)
 
     if not name:
         heading = soup.select_one(".display-name span")
@@ -345,6 +371,9 @@ def fetch_shop(
         address_node = soup.select_one(".rstinfo-table__address")
         address = address_node.get_text("", strip=True) if address_node else ""
     address = ADDRESS_OVERRIDES.get(shop_link.url, address)
+    override_latitude, override_longitude = COORDINATE_OVERRIDES.get(shop_link.url, ("", ""))
+    latitude = format_coordinate(override_latitude or latitude)
+    longitude = format_coordinate(override_longitude or longitude)
 
     description = f"食べログ {genre.title} 百名店 {genre.year}"
     return (
@@ -354,6 +383,8 @@ def fetch_shop(
             description=description,
             website=shop_link.url,
             google_maps_url=build_google_maps_url(address, name),
+            latitude=latitude,
+            longitude=longitude,
             year=genre.year,
             genre=genre.title,
             genre_slug=genre.slug,
@@ -450,6 +481,8 @@ def shop_rows(shops: Iterable[Shop]) -> Iterable[dict[str, str | int]]:
             "Description": shop.description,
             "Website": shop.website,
             "Google Maps URL": shop.google_maps_url,
+            "Latitude": shop.latitude,
+            "Longitude": shop.longitude,
             "Year": shop.year,
             "Genre": shop.genre,
             "Genre Slug": shop.genre_slug,
@@ -543,6 +576,8 @@ def main() -> None:
                 "Description",
                 "Website",
                 "Google Maps URL",
+                "Latitude",
+                "Longitude",
                 "Year",
                 "Genre",
                 "Genre Slug",
@@ -560,6 +595,8 @@ def main() -> None:
             "Description",
             "Website",
             "Google Maps URL",
+            "Latitude",
+            "Longitude",
             "Year",
             "Genre",
             "Genre Slug",

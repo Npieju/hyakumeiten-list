@@ -16,6 +16,10 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--prefecture", action="append", default=[])
 	parser.add_argument("--name-query")
 	parser.add_argument("--address-query")
+	parser.add_argument("--min-lat", type=float)
+	parser.add_argument("--max-lat", type=float)
+	parser.add_argument("--min-lng", type=float)
+	parser.add_argument("--max-lng", type=float)
 	parser.add_argument("--has-multiple-years", action="store_true")
 	parser.add_argument("--limit", type=int, default=20)
 	parser.add_argument("--offset", type=int, default=0)
@@ -50,6 +54,22 @@ def build_where_clause(args: argparse.Namespace) -> tuple[str, list[Any]]:
 	if args.address_query:
 		clauses.append("s.normalized_address LIKE ?")
 		parameters.append(f"%{normalize_text(args.address_query)}%")
+
+	if args.min_lat is not None:
+		clauses.append("s.latitude >= ?")
+		parameters.append(args.min_lat)
+
+	if args.max_lat is not None:
+		clauses.append("s.latitude <= ?")
+		parameters.append(args.max_lat)
+
+	if args.min_lng is not None:
+		clauses.append("s.longitude >= ?")
+		parameters.append(args.min_lng)
+
+	if args.max_lng is not None:
+		clauses.append("s.longitude <= ?")
+		parameters.append(args.max_lng)
 
 	if args.has_multiple_years:
 		clauses.append(
@@ -129,7 +149,7 @@ def main() -> None:
 		total = connection.execute(total_query, parameters).fetchone()["total"]
 
 		items_query = (
-			"SELECT s.shop_id, s.name, s.address, s.region, s.prefecture, "
+			"SELECT s.shop_id, s.name, s.address, s.latitude, s.longitude, s.region, s.prefecture, "
 			"s.tabelog_url, s.google_maps_url "
 			f"FROM shops s WHERE {where_clause} ORDER BY s.name, s.shop_id LIMIT ? OFFSET ?"
 		)
@@ -149,6 +169,8 @@ def main() -> None:
 					"shop_id": row["shop_id"],
 					"name": row["name"],
 					"address": row["address"],
+					"latitude": row["latitude"],
+					"longitude": row["longitude"],
 					"region": row["region"],
 					"prefecture": row["prefecture"],
 					"tabelog_url": row["tabelog_url"],
@@ -162,6 +184,7 @@ def main() -> None:
 		print(json.dumps(payload, ensure_ascii=False, indent=2))
 	finally:
 		connection.close()
+
 
 
 if __name__ == "__main__":

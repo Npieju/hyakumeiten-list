@@ -13,7 +13,14 @@ from urllib.parse import urlsplit, urlunsplit
 from build_region_csv import PREFECTURE_TO_REGION, extract_prefecture
 
 
+SCHEMA_VERSION = "1"
+
 SCHEMA_SQL = """
+CREATE TABLE app_metadata (
+	key TEXT PRIMARY KEY,
+	value TEXT NOT NULL
+);
+
 CREATE TABLE shops (
 	shop_id TEXT PRIMARY KEY,
 	tabelog_url TEXT NOT NULL UNIQUE,
@@ -22,6 +29,8 @@ CREATE TABLE shops (
 	address TEXT NOT NULL,
 	normalized_address TEXT NOT NULL,
 	google_maps_url TEXT NOT NULL,
+	latitude REAL NOT NULL,
+	longitude REAL NOT NULL,
 	prefecture TEXT NOT NULL,
 	region TEXT NOT NULL,
 	created_at TEXT NOT NULL,
@@ -31,6 +40,7 @@ CREATE TABLE shops (
 CREATE INDEX idx_shops_region ON shops(region);
 CREATE INDEX idx_shops_prefecture ON shops(prefecture);
 CREATE INDEX idx_shops_normalized_name ON shops(normalized_name);
+CREATE INDEX idx_shops_lat_lng ON shops(latitude, longitude);
 
 CREATE TABLE shop_years (
 	shop_id TEXT NOT NULL,
@@ -144,6 +154,16 @@ def prefer_value(current: str, candidate: str) -> str:
 	return current
 
 
+def parse_coordinate(value: str, field_name: str, row: dict[str, str]) -> float:
+	text = value.strip()
+	if not text:
+		raise SystemExit(f"Missing {field_name}: {row}")
+	try:
+		return float(text)
+	except ValueError as error:
+		raise SystemExit(f"Invalid {field_name} {value!r}: {row}") from error
+
+
 def iter_source_rows(input_root: Path) -> list[tuple[int, dict[str, str]]]:
 	source_rows: list[tuple[int, dict[str, str]]] = []
 	for year_dir in sorted(input_root.glob("[0-9][0-9][0-9][0-9]")):
@@ -183,6 +203,8 @@ def build_shop_records(
 		name = row.get("Name", "").strip()
 		address = row.get("Address", "").strip()
 		google_maps_url = row.get("Google Maps URL", "").strip()
+		latitude = parse_coordinate(row.get("Latitude", ""), "Latitude", row)
+		longitude = parse_coordinate(row.get("Longitude", ""), "Longitude", row)
 		prefecture = extract_prefecture(address) or ""
 		region = PREFECTURE_TO_REGION.get(prefecture, "unknown")
 
@@ -196,6 +218,8 @@ def build_shop_records(
 				"address": address,
 				"normalized_address": normalize_text(address),
 				"google_maps_url": google_maps_url,
+				"latitude": latitude,
+				"longitude": longitude,
 				"prefecture": prefecture,
 				"region": region,
 				"created_at": now,
@@ -208,6 +232,11 @@ def build_shop_records(
 				existing_shop["google_maps_url"],
 				google_maps_url,
 			)
+			if existing_shop["latitude"] != latitude or existing_shop["longitude"] != longitude:
+				raise SystemExit(
+					f"Coordinate mismatch for {shop_id}: "
+					f"({existing_shop['latitude']}, {existing_shop['longitude']}) != ({latitude}, {longitude})"
+				)
 			if prefecture and not existing_shop["prefecture"]:
 				existing_shop["prefecture"] = prefecture
 				existing_shop["region"] = region
@@ -244,10 +273,19 @@ def create_database(output_path: Path) -> sqlite3.Connection:
 
 def insert_records(
 	connection: sqlite3.Connection,
-	shops: dict[str, dict[str, str]],
+	shops: dict[str, dict[str, str | float]],
 	shop_years: dict[tuple[str, int], str],
 	shop_genres: set[tuple[str, int, str, str]],
+	now: str,
 ) -> None:
+	connection.executemany(
+		"INSERT INTO app_metadata (key, value) VALUES (?, ?)",
+		[
+			("schema_version", SCHEMA_VERSION),
+			("generated_at", now),
+		],
+	)
+
 	connection.executemany(
 		"""
 		INSERT INTO shops (
@@ -258,11 +296,13 @@ def insert_records(
 			address,
 			normalized_address,
 			google_maps_url,
+			latitude,
+			longitude,
 			prefecture,
 			region,
 			created_at,
 			updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		""",
 		[
 			(
@@ -273,6 +313,8 @@ def insert_records(
 				shop["address"],
 				shop["normalized_address"],
 				shop["google_maps_url"],
+				shop["latitude"],
+				shop["longitude"],
 				shop["prefecture"],
 				shop["region"],
 				shop["created_at"],
@@ -315,7 +357,7 @@ def main() -> None:
 
 	connection = create_database(output_path)
 	try:
-		insert_records(connection, shops, shop_years, shop_genres)
+		insert_records(connection, shops, shop_years, shop_genres, now)
 	finally:
 		connection.close()
 
