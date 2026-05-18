@@ -3,6 +3,7 @@
 この文書は予約検索機能の設計書である。
 要求仕様は [docs/reservation-search-requirements.md](/home/yt/Projects/hyakummeiten-list/docs/reservation-search-requirements.md) を参照する。
 CSV の入力契約は [docs/csv-data-spec.md](/home/yt/Projects/hyakummeiten-list/docs/csv-data-spec.md) を参照する。
+実装順は [docs/reservation-search-implementation-plan.md](/home/yt/Projects/hyakummeiten-list/docs/reservation-search-implementation-plan.md) を参照する。
 
 ## Design Goal
 
