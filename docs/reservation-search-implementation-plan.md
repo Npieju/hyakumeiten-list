@@ -17,6 +17,7 @@
 5. review フローは管理画面ではなく CSV export/import で回す
 6. `time_window` は MVP では `lunch` と `dinner` の固定値にする
 7. API 実装は CLI の動作確認が終わってから着手する
+8. `booking_closed` を正式な status 名とし、`closed` は使わない
 
 ## Current Baseline
 
@@ -81,18 +82,22 @@ Done when:
 
 1. 予約サイトとの紐付け候補を保存し、手動 review に回せる状態を作る
 
+この phase の確認対象は review CSV の入出力契約であり、候補が実データで埋まる経路そのものは Phase 3 で初めて end-to-end に確認する。
+
 Implementation tasks:
 
 1. `data/linkage/` 配下の運用ファイル構成を固定する
 2. review input/output CSV の列仕様を文書化する
 3. `scripts/export_link_review_csv.py` を追加し、`link_review_queue` を CSV に書き出せるようにする
 4. `scripts/import_link_review_csv.py` を追加し、review 結果を `reservation_links` に反映できるようにする
+5. `docs/examples/review_decisions.sample.csv` を追加し、import schema の検証 fixture にする
 
 Files:
 
 1. `scripts/export_link_review_csv.py`
 2. `scripts/import_link_review_csv.py`
 3. `docs/reservation-link-review-spec.md`
+4. `docs/examples/review_decisions.sample.csv`
 
 Outputs:
 
@@ -102,14 +107,14 @@ Outputs:
 Verification:
 
 ```bash
-python3 scripts/export_link_review_csv.py --provider example_provider
-python3 scripts/import_link_review_csv.py --provider example_provider --input data/linkage/example_provider/review_decisions.csv
+python3 scripts/export_link_review_csv.py --provider example_provider --allow-empty
+python3 scripts/import_link_review_csv.py --provider example_provider --input docs/examples/review_decisions.sample.csv --dry-run
 ```
 
 Done when:
 
-1. review queue を CSV に export できる
-2. review 結果を import して DB に反映できる
+1. review queue が空でも CSV を export できる
+2. sample decisions CSV を schema validation 付きで import 検証できる
 3. 手動 review に管理画面を前提としなくてよい
 
 ### Phase 2. Provider Adapter Interface
@@ -200,18 +205,21 @@ Implementation tasks:
 3. `search_candidates(shop)` を実装する
 4. `resolve_shop(candidate)` を実装する
 5. `fetch_availability(link, date, party_size, time_window)` を実装する
-6. provider 固有の利用制約を `docs/provider-notes/<provider>.md` に記録する
+6. `scripts/check_availability.py` を追加し、real provider で live fetch を実行できるようにする
+7. provider 固有の利用制約を `docs/provider-notes/<provider>.md` に記録する
 
 Files:
 
 1. `src/providers/<provider>.py`
-2. `docs/provider-notes/<provider>.md`
+2. `scripts/check_availability.py`
+3. `docs/provider-notes/<provider>.md`
 
 Outputs:
 
 1. 候補検索結果
 2. provider 固有の予約 URL
 3. availability normalized result
+4. live fetch 実行コマンド
 
 Verification:
 
@@ -234,11 +242,11 @@ Done when:
 
 Implementation tasks:
 
-1. `scripts/check_availability.py` を追加する
-2. cache hit / miss 判定を実装する
-3. `expires_at` の TTL を status ごとに決める
-4. 1 リクエスト最大 50 店舗の制約を適用する
-5. `provider_error` と `unknown` を区別して記録する
+1. `scripts/check_availability.py` に cache hit / miss 判定を実装する
+2. `expires_at` の TTL を status ごとに決める
+3. 1 リクエスト最大 50 店舗の制約を適用する
+4. `provider_error` と `unknown` を区別して記録する
+5. live fetch 結果を `availability_cache` に保存して再利用する
 
 Files:
 

@@ -652,15 +652,18 @@ MVP では次を固定する。
 
 1. `bookable`
 2. `sold_out`
-3. `closed`
-4. `unknown`
+3. `booking_closed`
+4. `temporarily_closed`
+5. `unknown`
 
 最終的な見せ方は次で決める。
 
 1. `supported + bookable` -> 予約可能店舗
-2. `supported + sold_out or closed` -> 予約終了店舗
-3. `unsupported` -> 予約対象外店舗
-4. `unknown` を含むもの -> 要確認
+2. `supported + sold_out` -> 予約終了店舗
+3. `supported + booking_closed` -> 予約終了店舗
+4. `supported + temporarily_closed` -> 予約終了店舗
+5. `unsupported` -> 予約対象外店舗
+6. `unknown` を含むもの -> 要確認
 
 ## MVP Proposal
 
@@ -669,7 +672,7 @@ MVP では次を固定する。
 1. 予約文化が比較的強いジャンルだけ対象にする
 2. provider は 1 サイトだけ対応する
 3. 入力は `date`, `party_size`, `genre_slug`, `region`
-4. 出力は `bookable`, `not_supported`, `booking_closed`, `unknown` を返す
+4. 出力は少なくとも `bookable`, `sold_out`, `not_supported`, `booking_closed`, `unknown` を返す
 
 優先ジャンル候補:
 
@@ -706,7 +709,4 @@ MVP では次を固定する。
 ## Open Questions
 
 1. 最初に対応する provider はどこか
-2. SQLite を単一ファイルで持つ場合の配置場所をどこにするか
-3. `review_required` の確定オペレーションを CSV インポートにするか
-4. `time_window` を固定値にするか、任意時刻にするか
-5. provider ごとの利用規約とアクセス制約をどう扱うか
+2. provider ごとの利用規約とアクセス制約をどう扱うか
