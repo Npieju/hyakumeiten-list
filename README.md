@@ -4,6 +4,8 @@
 
 同じ repo の中で、予約検索向けの検索マスタ実装も進めます。別 repo に切らず、既存の `data/` と `scripts/` を土台に段階的に追加する方針です。
 
+現在は CSV / SQLite 生成に加えて、同じ検索マスタを使う地図 Web アプリも同 repo に載せる前提です。
+
 CSV データの仕様は [docs/csv-data-spec.md](/home/yt/Projects/hyakummeiten-list/docs/csv-data-spec.md) にあります。
 予約サイト連携を含む次フェーズの要求仕様は [docs/reservation-search-requirements.md](/home/yt/Projects/hyakummeiten-list/docs/reservation-search-requirements.md) にあります。
 設計書は [docs/reservation-search-spec.md](/home/yt/Projects/hyakummeiten-list/docs/reservation-search-spec.md) にあります。
@@ -148,3 +150,36 @@ python3 scripts/query_shops.py --year 2025 --genre-slug sushi_tokyo --limit 5
 ```
 
 JSON で `total` と `items` を返します。
+
+## 地図 Web アプリを起動する
+
+検索マスタを API と地図 UI から使うには、先に SQLite を生成します。
+
+```bash
+python3 scripts/build_shop_master.py
+python3 -m src.api.app
+```
+
+別ポートで起動したい場合:
+
+```bash
+PORT=8001 python3 -m src.api.app
+```
+
+起動後にブラウザで次を開きます。
+
+- `http://127.0.0.1:8000/`
+
+この Web アプリは次を持ちます。
+
+- Leaflet ベースの地図表示
+- 現在 viewport に対する bounding box 検索
+- 店舗一覧と marker の同期表示
+- `Genre Slug`、年、地域、店名、複数年掲載の filter
+
+API 単体で確認する場合:
+
+```bash
+curl 'http://127.0.0.1:8000/health'
+curl 'http://127.0.0.1:8000/v1/shops/search?year=2025&genre_slug=sushi_tokyo&limit=3'
+```

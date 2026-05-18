@@ -7,18 +7,20 @@ CSV の入力契約は [docs/csv-data-spec.md](/home/yt/Projects/hyakummeiten-li
 
 ## Design Goal
 
-百名店データを起点に、要求仕様を満たす軽量な検索・予約判定システムを構築する。
+百名店データを起点に、要求仕様を満たす軽量な検索・予約判定システムを、地図 GUI を持つ Web アプリとして構築する。
 
-設計上の中心方針は、静的な店舗検索と、動的な予約状態判定を分離することにある。
+設計上の中心方針は、frontend の地図体験、静的な店舗検索、動的な予約状態判定を分離することにある。
 
 ## Design Scope
 
 初期スコープは次の通り。
 
 1. 百名店 CSV から 1 店舗 1 行の検索用マスタを構築する
-2. 店舗を予約サイトと紐付ける
-3. 日付クエリで予約状態を取得し、結果を分類して返す
-4. 細かいジャンル条件と予約状態条件を同時に扱えるようにする
+2. 地図 GUI を持つ Web フロントエンドを提供する
+3. frontend から呼ぶ検索 API を提供する
+4. 店舗を予約サイトと紐付ける
+5. 日付クエリで予約状態を取得し、結果を分類して返す
+6. 細かいジャンル条件と予約状態条件を同時に扱えるようにする
 
 次は初期スコープ外とする。
 
@@ -34,11 +36,12 @@ CSV の入力契約は [docs/csv-data-spec.md](/home/yt/Projects/hyakummeiten-li
 採用する構成:
 
 1. 永続ストアは SQLite 1 ファイル
-2. 検索 API は単一プロセス
-3. 静的検索は SQLite のみで完結
-4. 予約状態取得はオンデマンド実行
-5. 空席キャッシュも SQLite に保存
-6. 手動確認フローは管理画面ではなく CSV 出力で回す
+2. frontend は自前の Web アプリとして同 repo 内に持つ
+3. API は FastAPI + Uvicorn の単一プロセス
+4. 静的検索は SQLite のみで完結
+5. 予約状態取得はオンデマンド実行
+6. 空席キャッシュも SQLite に保存
+7. 手動確認フローは管理画面ではなく CSV 出力で回す
 
 採用しない構成:
 
@@ -47,21 +50,50 @@ CSV の入力契約は [docs/csv-data-spec.md](/home/yt/Projects/hyakummeiten-li
 3. 外部全文検索エンジン
 4. 全件巡回の常時バッチ
 5. provider ごとの常駐ワーカー
+6. 先に重い SPA build 基盤を前提にする構成
+7. 初期段階から WebGL / vector tile 中心に寄せる構成
 
 この設計の狙いは次の通り。
 
 1. サーバ費を SQLite と単一 API プロセスだけに抑える
-2. 外部アクセスは予約状態が必要なときだけ発生させる
-3. 百名店の静的検索と予約状態取得を分離して、通常検索のコストを一定に保つ
+2. frontend は静的配信可能な構成に保つ
+3. 外部アクセスは予約状態が必要なときだけ発生させる
+4. 百名店の静的検索と予約状態取得を分離して、通常検索のコストを一定に保つ
+
+## Technology Selection
+
+Web アプリ化にあたり、初期方針の「低コスト」「同 repo」「単一プロセス」「段階的拡張」を満たす技術を比較した上で、次を採用する。
+
+採用:
+
+1. API: FastAPI + Uvicorn
+2. frontend: 素の HTML / CSS / JavaScript（ES modules）
+3. map library: Leaflet
+4. frontend 配信: API プロセスと同一 origin で静的配信
+
+比較対象と判断:
+
+1. FastAPI vs Flask
+FastAPI を採用する。理由は、型付き request / response モデルを早い段階で固定しやすく、検索 API と予約 API の schema をそのまま契約として扱いやすいからである。Flask でも実装は可能だが、今回の計画では API 契約の固定を前倒ししているため、薄いが型を持てる FastAPI の方が方針に合う。
+
+2. Leaflet vs MapLibre GL JS
+Leaflet を採用する。今回の MVP で必要なのは marker 表示、popup、bounding box 連動、一覧同期であり、3D 表現や vector style の自由度は優先度が低い。MapLibre GL JS は表現力が高い一方で、初期構成・style 管理・描画負荷の設計論点が増える。低コスト・早期成立の方針では Leaflet の方が適切である。
+
+3. 素の JavaScript vs React / Vue / Svelte
+素の JavaScript を採用する。今回の初期 UI は 1 画面の map + filter + list であり、状態管理の複雑さはまだ限定的である。React などを入れると build、lint、依存更新、バンドラ選定が早期に必要になり、同 repo の軽量運用方針と衝突しやすい。複雑化した段階で移行余地を残す方が合理的である。
+
+4. frontend と API の別配信 vs 同一 origin 配信
+同一 origin 配信を採用する。MVP の段階では CORS、別デプロイ、環境差分の管理を避け、単一プロセスでローカル開発と本番運用の差を小さく保つ方がよい。
 
 ## Runtime Components
 
-実装対象のコンポーネントは 4 つ。
+実装対象のコンポーネントは 5 つ。
 
 1. オフライン取り込み: 百名店 CSV から検索用 DB を生成する
-2. 紐付け更新: 店舗と予約サイト候補を対応付ける
+2. Web フロントエンド: 地図表示と interactive 検索 UI を提供する
 3. クエリ API: 検索と予約状態付与を提供する
-4. provider adapter: 予約サイトごとの差分を吸収する
+4. 紐付け更新: 店舗と予約サイト候補を対応付ける
+5. provider adapter: 予約サイトごとの差分を吸収する
 
 ### Offline Import
 
@@ -89,11 +121,33 @@ CSV の入力契約は [docs/csv-data-spec.md](/home/yt/Projects/hyakummeiten-li
 1. 元データは従来通り `data/<year>/...` と `data/all_years/...` に置く
 2. アプリ向け生成物は `data/app/` に分ける
 3. 生成スクリプトは当面 `scripts/` 直下に置く
-4. provider adapter や API 実装が増えた段階で `app/` または `src/` を切る
+4. Web frontend と API 実装は `src/` 配下に置く
+
+### Web Frontend
+
+frontend は自前の Web アプリとして実装する。
+
+役割:
+
+1. 地図ライブラリを使って店舗 marker を描画する
+2. 地図 viewport と filter state を同期する
+3. API から返る店舗一覧を地図とリストの両方に反映する
+4. marker 選択時に店舗詳細と外部リンクを表示する
+5. 後続 phase で予約状態を色や badge に反映する
+
+初期方針:
+
+1. frontend は静的アセットとして配信可能にする
+2. frontend は HTML / CSS / JavaScript の最小構成で始める
+3. 地図ライブラリは Leaflet を採用する
+4. MVP では bounding box を API に渡して再検索する
+5. viewport 更新は debounce し、無駄な再検索を抑える
 
 ### Query API
 
 API は stateless に近い単一プロセスを想定する。
+
+実装基盤は FastAPI + Uvicorn を採用する。
 
 役割:
 
@@ -101,6 +155,16 @@ API は stateless に近い単一プロセスを想定する。
 2. 予約状態 filter がある場合だけ availability を評価する
 3. キャッシュヒット時は外部アクセスせず返す
 4. キャッシュミス時だけ provider adapter を呼ぶ
+
+### Frontend-API Contract
+
+frontend は API を直接呼び、CSV を直接読まない。
+
+理由:
+
+1. 検索条件、viewport、予約条件の組み合わせを frontend だけで安全に処理しきれない
+2. SQLite を API 背後に閉じ込める方が将来の provider 追加や schema 変更に強い
+3. marker 表示とリスト表示で同一レスポンスを再利用できる
 
 ## Requirement Mapping
 
@@ -412,7 +476,8 @@ adapter は遅延ロード可能な構成にする。未使用 provider のモ�
 用途:
 
 1. 静的検索のみ
-2. provider を呼ばない
+2. frontend の地図表示と一覧表示の共通データ取得
+3. provider を呼ばない
 
 Query params:
 
@@ -432,12 +497,25 @@ Query params:
 返却:
 
 1. `total`
-2. `items[]`
+2. `returned`
+3. `truncated`
+4. `warning`
+5. `items[]`
+
+`limit` は map と list の共通結果集合に対して適用する。
+MVP では map と list で別クエリには分けず、同じ `items[]` を描画に使う。
+`total > returned` の場合は `truncated = true` とし、frontend は「現在条件では一部のみ表示中」であることを明示する。
 
 `items[]` の shape:
 
 ```json
 {
+	"total": 128,
+	"returned": 100,
+	"truncated": true,
+	"warning": "too_many_results_in_viewport",
+	"items": [
+		{
 	"shop_id": "...",
 	"name": "...",
 	"address": "...",
@@ -450,6 +528,8 @@ Query params:
 	"years": [2023, 2024, 2025],
 	"genres": [
 		{"year": 2025, "genre_slug": "sushi_tokyo", "genre_name": "寿司 TOKYO"}
+	]
+		}
 	]
 }
 ```
@@ -527,15 +607,44 @@ Request body:
 3. 候補件数が 50 を超える場合は live fetch を打ち切る
 4. 打ち切り時はキャッシュヒット分のみ返し、レスポンスに warning を含める
 
+## Frontend Interaction Design
+
+### Primary Screens
+
+初期 UI は 1 画面で完結させる。
+
+1. 上部または左側に検索 filter
+2. 主領域に地図
+3. 補助領域に結果一覧
+4. marker 選択時の詳細 panel
+
+### Map Interaction Rules
+
+1. 初回表示では直近年を既定選択とし、代表 viewport は東京圏を初期表示に使う
+2. pan / zoom 完了後に現在 viewport を bounding box に変換して再検索する
+3. filter 変更時は viewport を維持したまま再検索する
+4. 検索結果が多い場合、marker clustering または件数上限制御を行う
+5. marker 選択時は対応する一覧項目も強調する
+
+初回表示で全国全件を即時描画しない。
+最初の検索は既定 viewport に限定し、利用者操作後に viewport を更新する。
+
+### Result Rendering Rules
+
+1. 地図 marker と一覧 item は同じ店舗集合を表す
+2. 一覧は地図外の全件ではなく、現在検索条件に一致した結果を表示する
+3. reservation status がある場合、marker と一覧の両方に同じ status 表現を適用する
+4. API 未応答時、frontend は loading / error 状態を明示する
+
 ## Recommended Lightweight Architecture
 
 初期推奨構成は次の通り。
 
 1. データ生成: 既存の CSV 生成スクリプト
 2. 検索用変換: `shop_master` と `reservation_links` を SQLite 化
-3. API 層: 単一プロセスの軽量 API
+3. API 層: FastAPI + Uvicorn の単一プロセス軽量 API
 4. キャッシュ層: SQLite 内の `availability_cache`
-5. フロント: 静的配信または最小限のテンプレート
+5. フロント: Leaflet を使う静的 Web アプリ
 
 避けるもの:
 
@@ -547,13 +656,15 @@ Request body:
 ### Recommended Request Flow
 
 1. リクエストを受ける
-2. SQLite の `shop_master` を `genre_slug`, `year`, `region`, `prefecture` で絞る
-3. 地図 UI の表示範囲がある場合は `latitude`, `longitude` で bounding box を先に絞る
-4. `reservation_links` で候補 provider を取る
-5. `availability_cache` を見る
-6. 有効なキャッシュがあればそのまま返す
-7. キャッシュ切れ分だけ provider adapter を呼ぶ
-8. 取得結果を SQLite に保存して返す
+2. frontend が filter と viewport を API に送る
+3. SQLite の `shop_master` を `genre_slug`, `year`, `region`, `prefecture` で絞る
+4. 地図 UI の表示範囲がある場合は `latitude`, `longitude` で bounding box を先に絞る
+5. `reservation_links` で候補 provider を取る
+6. `availability_cache` を見る
+7. 有効なキャッシュがあればそのまま返す
+8. キャッシュ切れ分だけ provider adapter を呼ぶ
+9. 取得結果を SQLite に保存して返す
+10. frontend が marker と一覧を再描画する
 
 この流れなら、静的検索はほぼローカル参照だけで終わり、外部アクセスは本当に必要な店舗に限定される。
 

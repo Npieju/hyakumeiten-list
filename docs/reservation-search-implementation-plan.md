@@ -16,10 +16,15 @@
 4. `data/all_years/all.csv` は監査・配布用であり、検索マスタの正規入力にしない
 5. review フローは管理画面ではなく CSV export/import で回す
 6. `time_window` は MVP では `lunch` と `dinner` の固定値にする
-7. API 実装は CLI の動作確認が終わってから着手する
-8. `booking_closed` を正式な status 名とし、`closed` は使わない
-9. 全店舗系 CSV は `Latitude` / `Longitude` を持つ
-10. 地理検索は MVP では `bounding box` を採用する
+7. プロダクトの主対象は CSV/CLI ではなく Web アプリとする
+8. frontend は Leaflet を使う自前 Web UI とする
+9. frontend は初期段階では HTML / CSS / JavaScript の最小構成で実装する
+10. API は FastAPI + Uvicorn を採用する
+11. frontend 配信は API と同一 origin の静的配信を採用する
+12. API 実装は Web アプリを成立させるための早い phase に前倒しする
+13. `booking_closed` を正式な status 名とし、`closed` は使わない
+14. 全店舗系 CSV は `Latitude` / `Longitude` を持つ
+15. 地理検索は MVP では `bounding box` を採用する
 
 ## Current Baseline
 
@@ -28,6 +33,7 @@
 1. [scripts/build_shop_master.py](/home/yt/Projects/hyakummeiten-list/scripts/build_shop_master.py): 年別 `by_genre` から SQLite を生成する
 2. [scripts/query_shops.py](/home/yt/Projects/hyakummeiten-list/scripts/query_shops.py): 静的検索 CLI を提供する
 3. [docs/csv-data-spec.md](/home/yt/Projects/hyakummeiten-list/docs/csv-data-spec.md): CSV 入力契約を固定済み
+4. 座標付き CSV と bounding box 検索の基盤は揃っている
 
 既知の確認コマンド:
 
@@ -88,13 +94,139 @@ Done when:
 3. 静的検索の主要 filter と bounding box filter が成功する
 4. DB 検証コマンドが 0 exit code で終わる
 
-### Phase 1. Link Review Data Model
+### Phase 1. Search API Foundation
+
+目的:
+
+1. Web アプリが呼ぶ静的検索 API を先に成立させる
+
+Implementation tasks:
+
+1. `src/api/` を追加する
+2. `GET /v1/shops/search` を `query_shops.py` 相当で実装する
+3. health check endpoint を追加する
+4. OpenAPI または API contract を固定する
+5. Web アプリから使う response shape を固定する
+6. FastAPI + Uvicorn での起動方法を固定する
+7. `returned`, `truncated`, `warning` を返して map/list 共通結果集合を明示する
+
+Files:
+
+1. `src/api/app.py`
+2. `src/api/search.py`
+3. `src/api/models.py`
+4. `requirements.txt`
+
+Outputs:
+
+1. 静的検索 API
+2. API 起動コマンド
+3. FastAPI の依存定義
+
+Verification:
+
+```bash
+python3 -m src.api.app
+curl 'http://localhost:8000/v1/shops/search?year=2025&genre_slug=sushi_tokyo&limit=3'
+curl 'http://localhost:8000/health'
+```
+
+Done when:
+
+1. `query_shops.py` と同等の静的検索結果を API で返せる
+2. bounding box 条件を API 経由で扱える
+3. Web アプリが使う JSON shape が固定される
+4. 単一コマンドで API が起動できる
+5. 結果件数超過時に frontend が部分表示だと判定できる
+
+### Phase 2. Map Web App Shell
+
+目的:
+
+1. 自前の地図 GUI を持つ Web アプリの骨格を作る
+
+Implementation tasks:
+
+1. `src/web/` を追加する
+2. Leaflet を使った単一画面の shell を作る
+3. filter UI と結果一覧の layout を作る
+4. API から静的検索結果を読み、marker と一覧を描画する
+5. loading / empty / error state を実装する
+6. API プロセスから静的配信できるようにする
+7. 初期 viewport を固定し、全国全件初回描画を避ける
+
+Files:
+
+1. `src/web/index.html`
+2. `src/web/app.js`
+3. `src/web/styles.css`
+4. `src/api/app.py`
+
+Outputs:
+
+1. 地図付き Web アプリの初期画面
+2. API 連動の店舗 marker と一覧
+3. 同一 origin で配信される Web アプリ
+
+Verification:
+
+```bash
+python3 -m src.api.app
+# ブラウザで Web アプリを開き、店舗 marker と一覧が表示されることを確認
+```
+
+Done when:
+
+1. Web アプリ上で店舗 marker が見える
+2. 一覧と marker が同じ検索結果を表す
+3. API エラー時に画面で失敗が分かる
+4. frontend と API の接続に追加の CORS 設定を要しない
+5. 初回表示で過大件数の描画を避けられる
+
+### Phase 3. Interactive Viewport Search
+
+目的:
+
+1. 地図の pan / zoom に応じた interactive 再検索を成立させる
+
+Implementation tasks:
+
+1. viewport を bounding box に変換する
+2. pan / zoom 後の debounce 再検索を実装する
+3. filter state と viewport state を同期する
+4. marker 選択と一覧選択を相互同期する
+5. 件数過多時の UI 挙動を固定する
+
+Files:
+
+1. `src/web/app.js`
+2. `src/api/search.py`
+3. `docs/reservation-search-spec.md`
+
+Outputs:
+
+1. viewport 連動検索
+2. interactive 更新付き地図 UI
+
+Verification:
+
+1. 地図を移動すると検索結果が更新される
+2. filter を変えても viewport が破綻しない
+3. marker 選択と一覧選択が同期する
+
+Done when:
+
+1. 地図 UI が interactive に検索更新できる
+2. bounding box 条件が frontend から自然に使える
+3. 初回要件の地図 GUI が成立する
+
+### Phase 4. Link Review Data Model
 
 目的:
 
 1. 予約サイトとの紐付け候補を保存し、手動 review に回せる状態を作る
 
-この phase の確認対象は review CSV の入出力契約であり、候補が実データで埋まる経路そのものは Phase 3 で初めて end-to-end に確認する。
+この phase の確認対象は review CSV の入出力契約であり、候補が実データで埋まる経路そのものは Phase 6 で初めて end-to-end に確認する。
 
 Implementation tasks:
 
@@ -129,7 +261,7 @@ Done when:
 2. sample decisions CSV を schema validation 付きで import 検証できる
 3. 手動 review に管理画面を前提としなくてよい
 
-### Phase 2. Provider Adapter Interface
+### Phase 5. Provider Adapter Interface
 
 目的:
 
@@ -165,7 +297,7 @@ Done when:
 2. provider 名から adapter を取得できる
 3. no-op adapter を使って上位ロジックが実行できる
 
-### Phase 3. Candidate Matching Pipeline
+### Phase 6. Candidate Matching Pipeline
 
 目的:
 
@@ -204,7 +336,7 @@ Done when:
 2. review 必須候補が CSV に落ちる
 3. 同一 `shop_id, provider` の重複が起きない
 
-### Phase 4. First Real Provider
+### Phase 7. First Real Provider
 
 目的:
 
@@ -246,7 +378,7 @@ Done when:
 2. 実 provider で availability が normalized shape に落ちる
 3. provider 固有注意点が文書化される
 
-### Phase 5. Availability Cache Updater
+### Phase 8. Availability Cache Updater
 
 目的:
 
@@ -283,30 +415,31 @@ Done when:
 2. 2 回目は cache hit が確認できる
 3. 取得結果が `availability_cache` に保存される
 
-### Phase 6. Reservation Search API
+### Phase 9. Reservation Search API
 
 目的:
 
-1. 既存 CLI を薄い API として公開し、予約状態付き検索を返せるようにする
+1. Web アプリから予約状態付き検索を呼べるようにする
 
 Implementation tasks:
 
-1. `src/api/` を追加する
-2. `GET /v1/shops/search` を `query_shops.py` 相当で実装する
-3. `POST /v1/shops/availability-search` を `check_availability.py` と連携して実装する
-4. `warning` と `cache_hit_ratio` をレスポンスに含める
-5. live fetch 50 件上限超過時のレスポンスを固定する
+1. `POST /v1/shops/availability-search` を `check_availability.py` と連携して実装する
+2. `warning` と `cache_hit_ratio` をレスポンスに含める
+3. live fetch 50 件上限超過時のレスポンスを固定する
+4. frontend から予約条件を渡せるようにする
+5. marker / 一覧に予約状態を反映する
 
 Files:
 
 1. `src/api/app.py`
-2. `src/api/search.py`
-3. `src/api/availability.py`
+2. `src/api/availability.py`
+3. `src/web/app.js`
+4. `src/web/styles.css`
 
 Outputs:
 
-1. 静的検索 API
-2. 予約状態付き検索 API
+1. 予約状態付き検索 API
+2. 予約状態を反映する Web アプリ UI
 
 Verification:
 
@@ -318,11 +451,11 @@ curl -X POST 'http://localhost:8000/v1/shops/availability-search' -H 'content-ty
 
 Done when:
 
-1. 静的検索 API が CLI と同等の結果を返す
-2. availability-search API が cache を使って結果を返す
-3. 候補過多時に warning が返る
+1. availability-search API が cache を使って結果を返す
+2. 候補過多時に warning が返る
+3. Web アプリ上で予約状態を視覚的に確認できる
 
-### Phase 7. Acceptance And Operations
+### Phase 10. Acceptance And Operations
 
 目的:
 
@@ -341,8 +474,8 @@ Files:
 
 Verification:
 
-1. `UC1` から `UC5` までを手動確認する
-2. DB 再生成から API 応答までを通しで確認する
+1. `UC0` から `UC5` までを手動確認する
+2. DB 再生成から API 応答、Web 画面更新までを通しで確認する
 
 Done when:
 
@@ -356,15 +489,16 @@ Done when:
 1. 1 phase につき 1 commit 以上を切る
 2. phase 完了後に必ず実行コマンドで検証する
 3. provider 固有実装を始める前に、共通 interface を先に確定する
-4. API 実装前に CLI で同等動作を通す
+4. 予約状態 API 実装前に CLI と下位スクリプトで同等動作を通す
 5. `data/app/` の生成物は git 管理しない
+6. frontend は CSV を直接読まず API 経由のみでデータ取得する
 
 ## Immediate Next Actions
 
-次に着手する作業は Phase 0 で固定する。
+次に着手する作業は Phase 1 で固定する。
 
-1. `scripts/validate_shop_master.py` を追加する
-2. `build_shop_master.py` に metadata table を追加する
-3. `query_shops.py` の主要 filter を検証する
+1. `src/api/` を追加する
+2. `GET /v1/shops/search` を実装する
+3. Web アプリが使う検索レスポンス shape を固定する
 
-この 3 点が終わったら、次の実装は Phase 1 に進む。
+この 3 点が終わったら、次の実装は Phase 2 に進む。
