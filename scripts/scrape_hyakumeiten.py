@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -24,6 +24,19 @@ USER_AGENT = (
     "Chrome/124.0.0.0 Safari/537.36"
 )
 GENRE_LINK_PATTERN = re.compile(r"^/hyakumeiten/(?P<slug>[a-z0-9_]+)$")
+SHOP_PATH_PATTERN = re.compile(r"^/[a-z]+/A\d+/A\d+/\d+/?$")
+SHOP_LINK_SELECTORS = (
+    "a.hyakumeiten-shop__target[href]",
+    "a.list-shop__link-page[href]",
+    "a.shop__name[href]",
+    "a.shop-button__detail[href]",
+    "a.hyakumeiten-rstlist__target[href]",
+    "a.hyakumeiten-keyvisual__target[href]",
+    "a.rstlist__target[href]",
+)
+REQUEST_TIMEOUT = 30
+REQUEST_RETRIES = 3
+REQUEST_RETRY_DELAY_SECONDS = 1.0
 
 
 @dataclass(frozen=True)
@@ -63,8 +76,30 @@ def build_session() -> requests.Session:
     return session
 
 
+def fetch_response(session: requests.Session, url: str) -> requests.Response:
+    last_error: requests.RequestException | None = None
+
+    for attempt in range(1, REQUEST_RETRIES + 1):
+        try:
+            return session.get(url, timeout=REQUEST_TIMEOUT)
+        except requests.RequestException as error:
+            last_error = error
+            if attempt == REQUEST_RETRIES:
+                raise
+
+            print_progress(
+                f"retrying request {attempt}/{REQUEST_RETRIES - 1} after error for {url}: {error}"
+            )
+            time.sleep(REQUEST_RETRY_DELAY_SECONDS * attempt)
+
+    if last_error is not None:
+        raise last_error
+
+    raise RuntimeError(f"request failed without an exception for {url}")
+
+
 def fetch_soup(session: requests.Session, url: str) -> BeautifulSoup:
-    response = session.get(url, timeout=30)
+    response = fetch_response(session, url)
     response.raise_for_status()
     return BeautifulSoup(response.text, "html.parser")
 
@@ -100,7 +135,7 @@ def resolve_genres(session: requests.Session, year: int) -> list[Genre]:
     for index, slug in enumerate(candidate_slugs, start=1):
         genre_url = f"{HYAKUMEITEN_ROOT}/{slug}/{year}"
         print_progress(f"checking genre {index}/{total_candidates}: {slug}")
-        response = session.get(genre_url, timeout=30)
+        response = fetch_response(session, genre_url)
         if response.status_code == 404:
             continue
 
@@ -176,6 +211,31 @@ def build_google_maps_url(address: str, name: str) -> str:
     return f"https://www.google.com/maps/search/?api=1&query={query}"
 
 
+def normalize_shop_url(url: str) -> str | None:
+    parsed = urlparse(urljoin(BASE_URL, url))
+    if parsed.netloc != "tabelog.com":
+        return None
+    if not SHOP_PATH_PATTERN.match(parsed.path):
+        return None
+    return f"{parsed.scheme}://{parsed.netloc}{parsed.path.rstrip('/')}/"
+
+
+def extract_shop_links(soup: BeautifulSoup) -> list[str]:
+    shop_links: list[str] = []
+    seen_links: set[str] = set()
+
+    for selector in SHOP_LINK_SELECTORS:
+        for anchor in soup.select(selector):
+            href = anchor.get("href", "")
+            shop_url = normalize_shop_url(href)
+            if shop_url is None or shop_url in seen_links:
+                continue
+            seen_links.add(shop_url)
+            shop_links.append(shop_url)
+
+    return shop_links
+
+
 def fetch_shop(session: requests.Session, genre: Genre, shop_url: str) -> Shop | None:
     try:
         soup = fetch_soup(session, shop_url)
@@ -217,14 +277,7 @@ def scrape_genre_shops(
 ) -> list[Shop]:
     print_progress(f"loading genre page: {genre.slug}")
     soup = fetch_soup(session, genre.url)
-    shop_links: list[str] = []
-    seen_links: set[str] = set()
-
-    for anchor in soup.select("a.hyakumeiten-shop__target[href]"):
-        shop_url = urljoin(BASE_URL, anchor["href"])
-        if shop_url not in seen_links:
-            seen_links.add(shop_url)
-            shop_links.append(shop_url)
+    shop_links = extract_shop_links(soup)
 
     total_shops = len(shop_links)
     skipped_shops = 0
