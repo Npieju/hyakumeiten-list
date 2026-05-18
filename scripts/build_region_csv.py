@@ -126,6 +126,14 @@ def main() -> None:
 
     for region_slug, rows in region_rows.items():
         target_path = by_region_dir / f"{region_slug}.csv"
+        if not rows:
+            if target_path.exists():
+                target_path.unlink()
+            print(
+                f"Skipped empty region output {target_path}"
+                f" ({REGION_LABELS[region_slug]})"
+            )
+            continue
         with target_path.open("w", encoding="utf-8", newline="") as target_file:
             writer = csv.DictWriter(target_file, fieldnames=fieldnames)
             writer.writeheader()
