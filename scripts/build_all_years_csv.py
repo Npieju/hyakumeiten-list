@@ -7,11 +7,50 @@ from pathlib import Path
 from build_region_csv import PREFECTURE_TO_REGION, REGION_LABELS, extract_prefecture
 
 
+MULTI_VALUE_SEPARATOR = " | "
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-dir", default="data")
     parser.add_argument("--output-dir", default="data/all_years")
     return parser.parse_args()
+
+
+def split_multi_value(value: str) -> list[str]:
+    cleaned = value.strip()
+    if not cleaned:
+        return []
+    return [part.strip() for part in cleaned.split(MULTI_VALUE_SEPARATOR) if part.strip()]
+
+
+def join_multi_value(values: list[str]) -> str:
+    return MULTI_VALUE_SEPARATOR.join(values)
+
+
+def prefer_value(current: str, candidate: str) -> str:
+    if not current:
+        return candidate
+    if len(candidate) > len(current):
+        return candidate
+    return current
+
+
+def update_unique_values(existing: str, candidate: str) -> str:
+    merged_values = split_multi_value(existing)
+    seen_values = set(merged_values)
+    for value in split_multi_value(candidate):
+        if value in seen_values:
+            continue
+        seen_values.add(value)
+        merged_values.append(value)
+    return join_multi_value(merged_values)
+
+
+def aggregate_description(row: dict[str, str]) -> str:
+    years = row.get("Year", "")
+    genres = row.get("Genre", "")
+    return f"食べログ 百名店: {years} / {genres}".strip()
 
 
 def main() -> None:
@@ -28,7 +67,7 @@ def main() -> None:
     if not source_paths:
         raise SystemExit(f"No yearly all.csv files found in {input_root}")
 
-    all_rows: list[dict[str, str]] = []
+    aggregated_rows_by_website: dict[str, dict[str, str]] = {}
     region_rows: dict[str, list[dict[str, str]]] = {
         slug: [] for slug in REGION_LABELS
     }
@@ -47,17 +86,47 @@ def main() -> None:
                 )
 
             for row in reader:
-                all_rows.append(row)
-                prefecture = extract_prefecture(row.get("Address", ""))
-                region_slug = (
-                    PREFECTURE_TO_REGION[prefecture]
-                    if prefecture is not None
-                    else "unknown"
-                )
-                region_rows[region_slug].append(row)
+                website = row.get("Website", "").strip()
+                if not website:
+                    raise SystemExit(f"Missing Website in {source_path}: {row}")
+
+                aggregated_row = aggregated_rows_by_website.get(website)
+                if aggregated_row is None:
+                    aggregated_row = dict(row)
+                    aggregated_rows_by_website[website] = aggregated_row
+                else:
+                    aggregated_row["Name"] = prefer_value(
+                        aggregated_row.get("Name", ""),
+                        row.get("Name", ""),
+                    )
+                    aggregated_row["Address"] = prefer_value(
+                        aggregated_row.get("Address", ""),
+                        row.get("Address", ""),
+                    )
+                    aggregated_row["Google Maps URL"] = prefer_value(
+                        aggregated_row.get("Google Maps URL", ""),
+                        row.get("Google Maps URL", ""),
+                    )
+                    for column in ("Year", "Genre", "Genre Slug", "Release Date"):
+                        aggregated_row[column] = update_unique_values(
+                            aggregated_row.get(column, ""),
+                            row.get(column, ""),
+                        )
+
+                aggregated_row["Description"] = aggregate_description(aggregated_row)
 
     if fieldnames is None:
         raise SystemExit(f"No CSV header found in {input_root}")
+
+    all_rows = list(aggregated_rows_by_website.values())
+    for row in all_rows:
+        prefecture = extract_prefecture(row.get("Address", ""))
+        region_slug = (
+            PREFECTURE_TO_REGION[prefecture]
+            if prefecture is not None
+            else "unknown"
+        )
+        region_rows[region_slug].append(row)
 
     output_root.mkdir(parents=True, exist_ok=True)
     by_region_dir.mkdir(parents=True, exist_ok=True)

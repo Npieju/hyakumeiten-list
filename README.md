@@ -98,6 +98,9 @@ Google My Maps 向けに、各店舗 CSV には以下を含めます。
 python3 scripts/build_all_years_csv.py
 ```
 
+この集計では、同じ `Website` の店舗は 1 行にまとめます。
+`Year`、`Genre`、`Genre Slug`、`Release Date` は ` | ` 区切りの複数値になります。
+
 出力先:
 
 - `data/all_years/all.csv`
