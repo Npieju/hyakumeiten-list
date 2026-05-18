@@ -18,6 +18,10 @@ from bs4 import BeautifulSoup
 
 BASE_URL = "https://award.tabelog.com"
 HYAKUMEITEN_ROOT = f"{BASE_URL}/hyakumeiten"
+
+ADDRESS_OVERRIDES = {
+    "https://tabelog.com/tokyo/A1303/A130302/13154404/": "東京都豊島区南大塚1-50-5 コーポ大塚マンション 1F",
+}
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -240,6 +244,8 @@ def parse_restaurant_json_ld(soup: BeautifulSoup) -> tuple[str, str]:
 
 def build_google_maps_url(address: str, name: str) -> str:
     query = quote(f"{name} {address}".strip())
+    if "13154404" in query and "東京都豊島区南大塚1-50-5" not in query:
+        query = quote(f"{name} 東京都豊島区南大塚1-50-5 コーポ大塚マンション 1F".strip())
     return f"https://www.google.com/maps/search/?api=1&query={query}"
 
 
@@ -303,11 +309,11 @@ def fetch_shop(
             return (
                 Shop(
                     name=shop_link.listed_name,
-                    address="",
+                    address=ADDRESS_OVERRIDES.get(shop_link.url, ""),
                     description=f"食べログ {genre.title} 百名店 {genre.year}",
                     website=shop_link.url,
                     google_maps_url=build_google_maps_url(
-                        shop_link.listed_area,
+                        ADDRESS_OVERRIDES.get(shop_link.url, shop_link.listed_area),
                         shop_link.listed_name,
                     ),
                     year=genre.year,
