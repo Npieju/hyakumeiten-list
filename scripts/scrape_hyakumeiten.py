@@ -34,6 +34,18 @@ SHOP_LINK_SELECTORS = (
     "a.hyakumeiten-keyvisual__target[href]",
     "a.rstlist__target[href]",
 )
+LISTING_NAME_SELECTORS = (
+    ".hyakumeiten-shop__name",
+    ".shop__name",
+    ".rstlist__name",
+    ".hyakummeiten-rstlist__name",
+)
+LISTING_AREA_SELECTORS = (
+    ".hyakumeiten-shop__station",
+    ".shop__area",
+    ".rstlist__info",
+    ".hyakummeiten-rstlist__info",
+)
 REQUEST_TIMEOUT = 30
 REQUEST_RETRIES = 3
 REQUEST_RETRY_DELAY_SECONDS = 1.0
@@ -62,7 +74,14 @@ class Shop:
 
 
 @dataclass(frozen=True)
-class SkippedShop:
+class ShopLink:
+    url: str
+    listed_name: str
+    listed_area: str
+
+
+@dataclass(frozen=True)
+class UnavailableShop:
     website: str
     year: int
     genre: str
@@ -70,6 +89,8 @@ class SkippedShop:
     release_date: str
     reason: str
     status_code: int | None
+    listed_name: str
+    listed_area: str
 
 
 def print_progress(message: str) -> None:
@@ -231,8 +252,19 @@ def normalize_shop_url(url: str) -> str | None:
     return f"{parsed.scheme}://{parsed.netloc}{parsed.path.rstrip('/')}/"
 
 
-def extract_shop_links(soup: BeautifulSoup) -> list[str]:
-    shop_links: list[str] = []
+def extract_first_text(anchor: BeautifulSoup, selectors: tuple[str, ...]) -> str:
+    for selector in selectors:
+        node = anchor.select_one(selector)
+        if node is None:
+            continue
+        text = node.get_text(" ", strip=True)
+        if text:
+            return text
+    return ""
+
+
+def extract_shop_links(soup: BeautifulSoup) -> list[ShopLink]:
+    shop_links: list[ShopLink] = []
     seen_links: set[str] = set()
 
     for selector in SHOP_LINK_SELECTORS:
@@ -242,26 +274,58 @@ def extract_shop_links(soup: BeautifulSoup) -> list[str]:
             if shop_url is None or shop_url in seen_links:
                 continue
             seen_links.add(shop_url)
-            shop_links.append(shop_url)
+            listed_name = extract_first_text(anchor, LISTING_NAME_SELECTORS)
+            listed_area = extract_first_text(anchor, LISTING_AREA_SELECTORS)
+            if not listed_name:
+                listed_name = anchor.get_text(" ", strip=True)
+            shop_links.append(
+                ShopLink(
+                    url=shop_url,
+                    listed_name=listed_name,
+                    listed_area=listed_area,
+                )
+            )
 
     return shop_links
 
 
-def fetch_shop(session: requests.Session, genre: Genre, shop_url: str) -> Shop | SkippedShop:
+def fetch_shop(
+    session: requests.Session,
+    genre: Genre,
+    shop_link: ShopLink,
+) -> tuple[Shop, UnavailableShop | None]:
     try:
-        soup = fetch_soup(session, shop_url)
+        soup = fetch_soup(session, shop_link.url)
     except requests.HTTPError as error:
         status_code = error.response.status_code if error.response is not None else None
         if status_code == 404:
-            print_progress(f"skipping missing shop page: {shop_url}")
-            return SkippedShop(
-                website=shop_url,
-                year=genre.year,
-                genre=genre.title,
-                genre_slug=genre.slug,
-                release_date=genre.release_date,
-                reason="http_404",
-                status_code=status_code,
+            print_progress(f"including unavailable shop page as fallback row: {shop_link.url}")
+            return (
+                Shop(
+                    name=shop_link.listed_name,
+                    address="",
+                    description=f"食べログ {genre.title} 百名店 {genre.year}",
+                    website=shop_link.url,
+                    google_maps_url=build_google_maps_url(
+                        shop_link.listed_area,
+                        shop_link.listed_name,
+                    ),
+                    year=genre.year,
+                    genre=genre.title,
+                    genre_slug=genre.slug,
+                    release_date=genre.release_date,
+                ),
+                UnavailableShop(
+                    website=shop_link.url,
+                    year=genre.year,
+                    genre=genre.title,
+                    genre_slug=genre.slug,
+                    release_date=genre.release_date,
+                    reason="http_404",
+                    status_code=status_code,
+                    listed_name=shop_link.listed_name,
+                    listed_area=shop_link.listed_area,
+                ),
             )
         raise
 
@@ -275,16 +339,19 @@ def fetch_shop(session: requests.Session, genre: Genre, shop_url: str) -> Shop |
         address = address_node.get_text("", strip=True) if address_node else ""
 
     description = f"食べログ {genre.title} 百名店 {genre.year}"
-    return Shop(
-        name=name,
-        address=address,
-        description=description,
-        website=shop_url,
-        google_maps_url=build_google_maps_url(address, name),
-        year=genre.year,
-        genre=genre.title,
-        genre_slug=genre.slug,
-        release_date=genre.release_date,
+    return (
+        Shop(
+            name=name,
+            address=address,
+            description=description,
+            website=shop_link.url,
+            google_maps_url=build_google_maps_url(address, name),
+            year=genre.year,
+            genre=genre.title,
+            genre_slug=genre.slug,
+            release_date=genre.release_date,
+        ),
+        None,
     )
 
 
@@ -293,56 +360,58 @@ def scrape_genre_shops(
     genre: Genre,
     throttle_seconds: float,
     workers: int,
-) -> tuple[list[Shop], list[SkippedShop]]:
+) -> tuple[list[Shop], list[UnavailableShop]]:
     print_progress(f"loading genre page: {genre.slug}")
     soup = fetch_soup(session, genre.url)
     shop_links = extract_shop_links(soup)
 
     total_shops = len(shop_links)
-    skipped_shops: list[SkippedShop] = []
+    unavailable_shops: list[UnavailableShop] = []
     print_progress(f"found {total_shops} shops for {genre.slug}")
     if workers <= 1:
         shops: list[Shop] = []
-        for index, shop_url in enumerate(shop_links, start=1):
+        for index, shop_link in enumerate(shop_links, start=1):
             if index == 1 or index == total_shops or index % 10 == 0:
                 print_progress(f"fetching {genre.slug} shop {index}/{total_shops}")
-            result = fetch_shop(session, genre, shop_url)
-            if isinstance(result, SkippedShop):
-                skipped_shops.append(result)
-            else:
-                shops.append(result)
+            shop, unavailable_shop = fetch_shop(session, genre, shop_link)
+            shops.append(shop)
+            if unavailable_shop is not None:
+                unavailable_shops.append(unavailable_shop)
             if throttle_seconds > 0:
                 time.sleep(throttle_seconds)
-        if skipped_shops:
-            print_progress(f"skipped {len(skipped_shops)} missing shops for {genre.slug}")
-        return shops, skipped_shops
+        if unavailable_shops:
+            print_progress(
+                f"recorded {len(unavailable_shops)} unavailable shop pages for {genre.slug}"
+            )
+        return shops, unavailable_shops
 
     indexed_shops: list[tuple[int, Shop]] = []
-    indexed_skipped_shops: list[tuple[int, SkippedShop]] = []
+    indexed_unavailable_shops: list[tuple[int, UnavailableShop]] = []
     with ThreadPoolExecutor(max_workers=workers) as executor:
         future_to_index = {
-            executor.submit(fetch_shop, session, genre, shop_url): index
-            for index, shop_url in enumerate(shop_links, start=1)
+            executor.submit(fetch_shop, session, genre, shop_link): index
+            for index, shop_link in enumerate(shop_links, start=1)
         }
         completed = 0
         for future in as_completed(future_to_index):
             index = future_to_index[future]
-            result = future.result()
-            if isinstance(result, SkippedShop):
-                indexed_skipped_shops.append((index, result))
-            else:
-                indexed_shops.append((index, result))
+            shop, unavailable_shop = future.result()
+            indexed_shops.append((index, shop))
+            if unavailable_shop is not None:
+                indexed_unavailable_shops.append((index, unavailable_shop))
             completed += 1
             if completed == 1 or completed == total_shops or completed % 10 == 0:
                 print_progress(f"fetched {genre.slug} shop {completed}/{total_shops}")
             if throttle_seconds > 0:
                 time.sleep(throttle_seconds)
 
-    if indexed_skipped_shops:
-        print_progress(f"skipped {len(indexed_skipped_shops)} missing shops for {genre.slug}")
+    if indexed_unavailable_shops:
+        print_progress(
+            f"recorded {len(indexed_unavailable_shops)} unavailable shop pages for {genre.slug}"
+        )
     indexed_shops.sort(key=lambda item: item[0])
-    indexed_skipped_shops.sort(key=lambda item: item[0])
-    return [shop for _, shop in indexed_shops], [shop for _, shop in indexed_skipped_shops]
+    indexed_unavailable_shops.sort(key=lambda item: item[0])
+    return [shop for _, shop in indexed_shops], [shop for _, shop in indexed_unavailable_shops]
 
 
 def write_csv(path: Path, rows: Iterable[dict[str, str | int]], fieldnames: list[str]) -> None:
@@ -380,16 +449,20 @@ def shop_rows(shops: Iterable[Shop]) -> Iterable[dict[str, str | int]]:
         }
 
 
-def skipped_shop_rows(skipped_shops: Iterable[SkippedShop]) -> Iterable[dict[str, str | int]]:
-    for skipped_shop in skipped_shops:
+def unavailable_shop_rows(
+    unavailable_shops: Iterable[UnavailableShop],
+) -> Iterable[dict[str, str | int]]:
+    for unavailable_shop in unavailable_shops:
         yield {
-            "Website": skipped_shop.website,
-            "Year": skipped_shop.year,
-            "Genre": skipped_shop.genre,
-            "Genre Slug": skipped_shop.genre_slug,
-            "Release Date": skipped_shop.release_date,
-            "Reason": skipped_shop.reason,
-            "Status Code": skipped_shop.status_code or "",
+            "Website": unavailable_shop.website,
+            "Year": unavailable_shop.year,
+            "Genre": unavailable_shop.genre,
+            "Genre Slug": unavailable_shop.genre_slug,
+            "Release Date": unavailable_shop.release_date,
+            "Reason": unavailable_shop.reason,
+            "Status Code": unavailable_shop.status_code or "",
+            "Listed Name": unavailable_shop.listed_name,
+            "Listed Area": unavailable_shop.listed_area,
         }
 
 
@@ -437,20 +510,22 @@ def main() -> None:
         )
 
     all_shops: list[Shop] = []
-    skipped_shops: list[SkippedShop] = []
+    unavailable_shops: list[UnavailableShop] = []
     combined_output_name = "selected.csv" if args.genre_slugs else "all.csv"
-    skipped_output_name = "selected_skipped.csv" if args.genre_slugs else "skipped.csv"
+    unavailable_output_name = (
+        "selected_unavailable.csv" if args.genre_slugs else "unavailable.csv"
+    )
     total_genres = len(genres)
     for index, genre in enumerate(genres, start=1):
         print_progress(f"scraping genre {index}/{total_genres}: {genre.slug}")
-        shops, genre_skipped_shops = scrape_genre_shops(
+        shops, genre_unavailable_shops = scrape_genre_shops(
             session,
             genre,
             args.throttle_seconds,
             max(1, args.workers),
         )
         all_shops.extend(shops)
-        skipped_shops.extend(genre_skipped_shops)
+        unavailable_shops.extend(genre_unavailable_shops)
         write_csv(
             output_root / "by_genre" / f"{genre.slug}.csv",
             shop_rows(shops),
@@ -486,8 +561,8 @@ def main() -> None:
     print(f"Wrote {len(all_shops)} shops to {output_root / combined_output_name}")
 
     write_csv(
-        output_root / skipped_output_name,
-        skipped_shop_rows(skipped_shops),
+        output_root / unavailable_output_name,
+        unavailable_shop_rows(unavailable_shops),
         [
             "Website",
             "Year",
@@ -496,9 +571,13 @@ def main() -> None:
             "Release Date",
             "Reason",
             "Status Code",
+            "Listed Name",
+            "Listed Area",
         ],
     )
-    print(f"Wrote {len(skipped_shops)} skipped shops to {output_root / skipped_output_name}")
+    print(
+        f"Wrote {len(unavailable_shops)} unavailable shops to {output_root / unavailable_output_name}"
+    )
 
 
 if __name__ == "__main__":

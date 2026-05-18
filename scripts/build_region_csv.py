@@ -61,6 +61,7 @@ REGION_LABELS = {
     "chubu": "中部",
     "kansai": "関西",
     "chugoku_shikoku_kyushu": "中国四国九州",
+    "unknown": "未分類",
 }
 
 
@@ -71,11 +72,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def extract_prefecture(address: str) -> str:
+def extract_prefecture(address: str) -> str | None:
     for prefecture in PREFECTURE_TO_REGION:
         if address.startswith(prefecture):
             return prefecture
-    raise SystemExit(f"Could not determine prefecture from address: {address}")
+    return None
 
 
 def main() -> None:
@@ -106,7 +107,11 @@ def main() -> None:
             for row in reader:
                 all_rows.append(row)
                 prefecture = extract_prefecture(row.get("Address", ""))
-                region_slug = PREFECTURE_TO_REGION[prefecture]
+                region_slug = (
+                    PREFECTURE_TO_REGION[prefecture]
+                    if prefecture is not None
+                    else "unknown"
+                )
                 region_rows[region_slug].append(row)
 
     if fieldnames is None:
