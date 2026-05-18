@@ -4,3 +4,5 @@ __pycache__/
 .pytest_cache/
 get-pip.py
 data/*/selected.csv
+data/app/*.sqlite3
+data/app/*.sqlite3-*

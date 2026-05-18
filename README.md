@@ -2,6 +2,11 @@
 
 食べログ 百名店を年別・ジャンル別の CSV に整形して、Google My Maps に取り込みやすくするためのスクレイパーです。
 
+同じ repo の中で、予約検索向けの検索マスタ実装も進めます。別 repo に切らず、既存の `data/` と `scripts/` を土台に段階的に追加する方針です。
+
+予約サイト連携を含む次フェーズの要求仕様は [docs/reservation-search-requirements.md](/home/yt/Projects/hyakummeiten-list/docs/reservation-search-requirements.md) にあります。
+設計書は [docs/reservation-search-spec.md](/home/yt/Projects/hyakummeiten-list/docs/reservation-search-spec.md) にあります。
+
 現状は `2025` 年を対象にしています。
 
 ## セットアップ
@@ -110,3 +115,34 @@ python3 scripts/build_all_years_csv.py
 - `data/all_years/by_region/kansai.csv`
 - `data/all_years/by_region/chugoku_shikoku_kyushu.csv`
 - `data/all_years/by_region/unknown.csv`
+
+## 予約検索向けの検索マスタを作る
+
+予約検索フェーズの初期実装として、年別 `by_genre` CSV から SQLite の検索マスタを作れます。
+
+```bash
+python3 scripts/build_shop_master.py
+```
+
+出力先:
+
+- `data/app/hyakummeiten.sqlite3`
+
+この DB には次が入ります。
+
+- `shops`
+- `shop_years`
+- `shop_genres`
+- `reservation_links`
+- `availability_cache`
+- `link_review_queue`
+
+## 検索マスタを静的検索する
+
+API 実装前の確認用として、SQLite マスタをそのまま検索する CLI を用意しています。
+
+```bash
+python3 scripts/query_shops.py --year 2025 --genre-slug sushi_tokyo --limit 5
+```
+
+JSON で `total` と `items` を返します。
