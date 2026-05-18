@@ -18,6 +18,8 @@
 6. `time_window` は MVP では `lunch` と `dinner` の固定値にする
 7. API 実装は CLI の動作確認が終わってから着手する
 8. `booking_closed` を正式な status 名とし、`closed` は使わない
+9. 全店舗系 CSV は `Latitude` / `Longitude` を持つ
+10. 地理検索は MVP では `bounding box` を採用する
 
 ## Current Baseline
 
@@ -42,39 +44,49 @@ python3 scripts/query_shops.py --year 2025 --genre-slug sushi_tokyo --limit 3
 
 目的:
 
-1. 既存の SQLite 生成と静的検索を、以後の実装の土台として固定する
+1. 座標付き CSV と静的検索を、以後の実装の土台として固定する
 
 Implementation tasks:
 
-1. `build_shop_master.py` に schema version 管理用の metadata table を追加する
-2. `query_shops.py` に `--region`, `--prefecture`, `--name-query`, `--address-query`, `--has-multiple-years` の動作確認ケースを追加する
-3. `scripts/validate_shop_master.py` を追加し、主要 table 件数と必須 table 存在を検証できるようにする
+1. `scrape_hyakumeiten.py` に `Latitude` / `Longitude` 列を追加する
+2. `build_region_csv.py` と `build_all_years_csv.py` で座標列を保持する
+3. `build_shop_master.py` に `latitude`, `longitude` と schema version 管理用 metadata table を追加する
+4. `query_shops.py` に `bounding box` filter を追加する
+5. `query_shops.py` に `--region`, `--prefecture`, `--name-query`, `--address-query`, `--has-multiple-years` の動作確認ケースを追加する
+6. `scripts/validate_shop_master.py` を追加し、主要 table 件数、必須 table、座標列存在を検証できるようにする
 
 Files:
 
-1. [scripts/build_shop_master.py](/home/yt/Projects/hyakummeiten-list/scripts/build_shop_master.py)
-2. [scripts/query_shops.py](/home/yt/Projects/hyakummeiten-list/scripts/query_shops.py)
-3. `scripts/validate_shop_master.py`
+1. `scripts/scrape_hyakumeiten.py`
+2. `scripts/build_region_csv.py`
+3. `scripts/build_all_years_csv.py`
+4. [scripts/build_shop_master.py](/home/yt/Projects/hyakummeiten-list/scripts/build_shop_master.py)
+5. [scripts/query_shops.py](/home/yt/Projects/hyakummeiten-list/scripts/query_shops.py)
+6. `scripts/validate_shop_master.py`
 
 Outputs:
 
-1. `data/app/hyakummeiten.sqlite3`
-2. 検証用の標準出力ログ
+1. `Latitude` / `Longitude` を含む店舗系 CSV
+2. `data/app/hyakummeiten.sqlite3`
+3. 検証用の標準出力ログ
 
 Verification:
 
 ```bash
+python3 scripts/scrape_hyakumeiten.py --year 2025 --genre sushi_tokyo --throttle-seconds 0 --workers 4 --output-dir /tmp/hyakummeiten-geo
 python3 scripts/build_shop_master.py
 python3 scripts/validate_shop_master.py
 python3 scripts/query_shops.py --year 2025 --genre-slug sushi_tokyo --limit 3
+python3 scripts/query_shops.py --min-lat 35.60 --max-lat 35.75 --min-lng 139.60 --max-lng 139.85 --limit 5
 python3 scripts/query_shops.py --region kanto --name-query 鮨 --limit 5
 ```
 
 Done when:
 
-1. SQLite 生成が再実行可能である
-2. 静的検索の主要 filter がすべて成功する
-3. DB 検証コマンドが 0 exit code で終わる
+1. 店舗系 CSV に `Latitude` / `Longitude` が入る
+2. SQLite 生成が再実行可能である
+3. 静的検索の主要 filter と bounding box filter が成功する
+4. DB 検証コマンドが 0 exit code で終わる
 
 ### Phase 1. Link Review Data Model
 

@@ -7,6 +7,9 @@
 1. CSV 出力の列仕様と再生成ルールを固定する
 2. 予約検索フェーズがどの CSV を入力 source of truth として使うかを明確にする
 
+この契約では、全店舗系 CSV に `Latitude` と `Longitude` を含めることを前提とする。
+ただし `genres.csv` と `unavailable.csv` はメタデータ・監査ログであり、座標列の対象外とする。
+
 ## Scope
 
 対象は次の CSV 群である。
@@ -89,10 +92,12 @@ Columns:
 3. `Description`
 4. `Website`
 5. `Google Maps URL`
-6. `Year`
-7. `Genre`
-8. `Genre Slug`
-9. `Release Date`
+6. `Latitude`
+7. `Longitude`
+8. `Year`
+9. `Genre`
+10. `Genre Slug`
+11. `Release Date`
 
 Invariants:
 
@@ -101,11 +106,14 @@ Invariants:
 3. `Website` は店舗の canonical key として扱う
 4. 同一店舗が複数年に掲載される場合でも、年ごとに別行になる
 5. 同一店舗が同一年に複数 genre に載る場合は、genre ごとに別行になる
+6. `Latitude` と `Longitude` は WGS84 の 10 進度数で保持する
+7. 店舗系 CSV の完成条件は、原則として全行に `Latitude` / `Longitude` が入ることである
 
 Notes:
 
 1. 404 など取得不能な店舗でも、一覧に存在する限り行自体は保持する
 2. その場合の `Address` は override または空文字になりうる
+3. 座標解決に失敗する行は override または手動補完対象として扱い、最終出力では空欄のまま放置しない
 
 ### `data/<year>/all.csv`
 
@@ -153,6 +161,7 @@ Rules:
 
 1. 永続的な配布物ではなく、作業用出力とみなす
 2. `data/<year>/all.csv` を置き換えるものではない
+3. 列構成は `data/<year>/by_genre/*.csv` と同一で、`Latitude` / `Longitude` も含む
 
 ### `data/<year>/by_region/*.csv`
 
@@ -171,6 +180,7 @@ Rules:
 
 1. 地域分類は `Address` の都道府県接頭辞から決める
 2. 判定不能な行は `unknown.csv` に入る
+3. 列構成は `data/<year>/all.csv` と同一で、`Latitude` / `Longitude` を保持する
 
 ### `data/all_years/all.csv`
 
@@ -183,16 +193,19 @@ Columns:
 3. `Description`
 4. `Website`
 5. `Google Maps URL`
-6. `Year`
-7. `Genre`
-8. `Genre Slug`
-9. `Release Date`
+6. `Latitude`
+7. `Longitude`
+8. `Year`
+9. `Genre`
+10. `Genre Slug`
+11. `Release Date`
 
 Aggregation rules:
 
 1. 重複判定キーは `Website`
 2. `Year`, `Genre`, `Genre Slug`, `Release Date` は ` | ` 区切りで連結する
 3. `Name`, `Address`, `Google Maps URL` は長い方を優先して代表値にする
+4. `Latitude`, `Longitude` は単一店舗値として保持し、年を跨いで不一致がある場合はデータ不整合として検出対象にする
 
 Warning:
 
@@ -201,12 +214,16 @@ Warning:
 
 ## Regeneration Rules
 
+店舗系 CSV の再生成では、scrape と集計に加えて座標付与も契約に含める。
+
 ### Rebuild a year
 
 ```bash
 python3 scripts/scrape_hyakumeiten.py --year 2025 --throttle-seconds 0 --workers 4
 python3 scripts/build_region_csv.py --year 2025
 ```
+
+この再生成で得られる店舗系 CSV は `Latitude` / `Longitude` を含む完全形を想定する。
 
 ### Rebuild all years aggregate
 
@@ -229,6 +246,12 @@ This command must read `data/<year>/by_genre/*.csv` as input.
 1. `Website` は shop identity の基準キーである
 2. `Genre Slug` は検索用の安定キーである
 3. `data/<year>/by_genre/*.csv` は `shop_years` と `shop_genres` の正規入力である
-4. `data/all_years/all.csv` は監査・配布向けであり、正規入力ではない
+4. `Latitude` / `Longitude` は店舗座標の正規値であり、静的地理検索の前提になる
+5. `data/all_years/all.csv` は監査・配布向けであり、正規入力ではない
+
+補足:
+
+1. この契約は target state を表す
+2. Phase 0 実装前の既存 CSV snapshot には `Latitude` / `Longitude` 列がまだ存在しない場合がある
 
 この契約を変える場合は、scraper、集計スクリプト、検索マスタ生成、要求仕様、設計書を同時に更新する。

@@ -127,8 +127,10 @@ API は stateless に近い単一プロセスを想定する。
 5. `name_query`: 店名部分一致
 6. `address_query`: 住所部分一致
 7. `has_multiple_years`: 複数年掲載の有無
+8. `bounding_box`: `min_lat`, `max_lat`, `min_lng`, `max_lng`
 
 検索キーは表示名の `Genre` ではなく、安定した `Genre Slug` を使う。
+地理検索では店舗に保持した `Latitude` / `Longitude` を使い、MVP では半径検索ではなく bounding box を採用する。
 
 ### Reservation Filter
 
@@ -182,6 +184,8 @@ CREATE TABLE shops (
 	address TEXT NOT NULL,
 	normalized_address TEXT NOT NULL,
 	google_maps_url TEXT NOT NULL,
+	latitude REAL NOT NULL,
+	longitude REAL NOT NULL,
 	prefecture TEXT NOT NULL,
 	region TEXT NOT NULL,
 	created_at TEXT NOT NULL,
@@ -191,7 +195,10 @@ CREATE TABLE shops (
 CREATE INDEX idx_shops_region ON shops(region);
 CREATE INDEX idx_shops_prefecture ON shops(prefecture);
 CREATE INDEX idx_shops_normalized_name ON shops(normalized_name);
+CREATE INDEX idx_shops_lat_lng ON shops(latitude, longitude);
 ```
+
+`latitude` と `longitude` は WGS84 の 10 進度数で保持する。
 
 ### Table: shop_years
 
@@ -318,9 +325,10 @@ CREATE TABLE link_review_queue (
 
 1. `data/<year>/by_genre/*.csv` を年ごとに走査する
 2. `Website` を `shop_id` の基準にして `shops` を作る
-3. `Year` を分解して `shop_years` を作る
-4. 各年の `Genre Slug` と `Genre` をそのまま `shop_genres` に積む
-5. `prefecture` と `region` を住所から決定する
+3. `Latitude` / `Longitude` を `shops` に積む
+4. `Year` を分解して `shop_years` を作る
+5. 各年の `Genre Slug` と `Genre` をそのまま `shop_genres` に積む
+6. `prefecture` と `region` を住所から決定する
 
 出力スクリプト名は `scripts/build_shop_master.py` とする。
 
@@ -414,8 +422,12 @@ Query params:
 4. `prefecture`
 5. `name_query`
 6. `address_query`
-7. `limit`
-8. `offset`
+7. `min_lat`
+8. `max_lat`
+9. `min_lng`
+10. `max_lng`
+11. `limit`
+12. `offset`
 
 返却:
 
@@ -429,6 +441,8 @@ Query params:
 	"shop_id": "...",
 	"name": "...",
 	"address": "...",
+	"latitude": 35.6764,
+	"longitude": 139.6993,
 	"region": "kanto",
 	"prefecture": "東京都",
 	"tabelog_url": "...",
@@ -456,6 +470,12 @@ Request body:
 		"genre_slug": ["sushi_tokyo"],
 		"region": ["kanto"],
 		"prefecture": [],
+		"bounding_box": {
+			"min_lat": 35.60,
+			"max_lat": 35.75,
+			"min_lng": 139.60,
+			"max_lng": 139.85
+		},
 		"name_query": null,
 		"address_query": null
 	},
@@ -528,11 +548,12 @@ Request body:
 
 1. リクエストを受ける
 2. SQLite の `shop_master` を `genre_slug`, `year`, `region`, `prefecture` で絞る
-3. `reservation_links` で候補 provider を取る
-4. `availability_cache` を見る
-5. 有効なキャッシュがあればそのまま返す
-6. キャッシュ切れ分だけ provider adapter を呼ぶ
-7. 取得結果を SQLite に保存して返す
+3. 地図 UI の表示範囲がある場合は `latitude`, `longitude` で bounding box を先に絞る
+4. `reservation_links` で候補 provider を取る
+5. `availability_cache` を見る
+6. 有効なキャッシュがあればそのまま返す
+7. キャッシュ切れ分だけ provider adapter を呼ぶ
+8. 取得結果を SQLite に保存して返す
 
 この流れなら、静的検索はほぼローカル参照だけで終わり、外部アクセスは本当に必要な店舗に限定される。
 
