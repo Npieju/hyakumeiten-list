@@ -61,6 +61,17 @@ class Shop:
     release_date: str
 
 
+@dataclass(frozen=True)
+class SkippedShop:
+    website: str
+    year: int
+    genre: str
+    genre_slug: str
+    release_date: str
+    reason: str
+    status_code: int | None
+
+
 def print_progress(message: str) -> None:
     print(f"[progress] {message}", file=sys.stderr, flush=True)
 
@@ -236,14 +247,22 @@ def extract_shop_links(soup: BeautifulSoup) -> list[str]:
     return shop_links
 
 
-def fetch_shop(session: requests.Session, genre: Genre, shop_url: str) -> Shop | None:
+def fetch_shop(session: requests.Session, genre: Genre, shop_url: str) -> Shop | SkippedShop:
     try:
         soup = fetch_soup(session, shop_url)
     except requests.HTTPError as error:
         status_code = error.response.status_code if error.response is not None else None
         if status_code == 404:
             print_progress(f"skipping missing shop page: {shop_url}")
-            return None
+            return SkippedShop(
+                website=shop_url,
+                year=genre.year,
+                genre=genre.title,
+                genre_slug=genre.slug,
+                release_date=genre.release_date,
+                reason="http_404",
+                status_code=status_code,
+            )
         raise
 
     name, address = parse_restaurant_json_ld(soup)
@@ -274,31 +293,32 @@ def scrape_genre_shops(
     genre: Genre,
     throttle_seconds: float,
     workers: int,
-) -> list[Shop]:
+) -> tuple[list[Shop], list[SkippedShop]]:
     print_progress(f"loading genre page: {genre.slug}")
     soup = fetch_soup(session, genre.url)
     shop_links = extract_shop_links(soup)
 
     total_shops = len(shop_links)
-    skipped_shops = 0
+    skipped_shops: list[SkippedShop] = []
     print_progress(f"found {total_shops} shops for {genre.slug}")
     if workers <= 1:
         shops: list[Shop] = []
         for index, shop_url in enumerate(shop_links, start=1):
             if index == 1 or index == total_shops or index % 10 == 0:
                 print_progress(f"fetching {genre.slug} shop {index}/{total_shops}")
-            shop = fetch_shop(session, genre, shop_url)
-            if shop is None:
-                skipped_shops += 1
+            result = fetch_shop(session, genre, shop_url)
+            if isinstance(result, SkippedShop):
+                skipped_shops.append(result)
             else:
-                shops.append(shop)
+                shops.append(result)
             if throttle_seconds > 0:
                 time.sleep(throttle_seconds)
-        if skipped_shops > 0:
-            print_progress(f"skipped {skipped_shops} missing shops for {genre.slug}")
-        return shops
+        if skipped_shops:
+            print_progress(f"skipped {len(skipped_shops)} missing shops for {genre.slug}")
+        return shops, skipped_shops
 
     indexed_shops: list[tuple[int, Shop]] = []
+    indexed_skipped_shops: list[tuple[int, SkippedShop]] = []
     with ThreadPoolExecutor(max_workers=workers) as executor:
         future_to_index = {
             executor.submit(fetch_shop, session, genre, shop_url): index
@@ -307,21 +327,22 @@ def scrape_genre_shops(
         completed = 0
         for future in as_completed(future_to_index):
             index = future_to_index[future]
-            shop = future.result()
-            if shop is None:
-                skipped_shops += 1
+            result = future.result()
+            if isinstance(result, SkippedShop):
+                indexed_skipped_shops.append((index, result))
             else:
-                indexed_shops.append((index, shop))
+                indexed_shops.append((index, result))
             completed += 1
             if completed == 1 or completed == total_shops or completed % 10 == 0:
                 print_progress(f"fetched {genre.slug} shop {completed}/{total_shops}")
             if throttle_seconds > 0:
                 time.sleep(throttle_seconds)
 
-    if skipped_shops > 0:
-        print_progress(f"skipped {skipped_shops} missing shops for {genre.slug}")
+    if indexed_skipped_shops:
+        print_progress(f"skipped {len(indexed_skipped_shops)} missing shops for {genre.slug}")
     indexed_shops.sort(key=lambda item: item[0])
-    return [shop for _, shop in indexed_shops]
+    indexed_skipped_shops.sort(key=lambda item: item[0])
+    return [shop for _, shop in indexed_shops], [shop for _, shop in indexed_skipped_shops]
 
 
 def write_csv(path: Path, rows: Iterable[dict[str, str | int]], fieldnames: list[str]) -> None:
@@ -356,6 +377,19 @@ def shop_rows(shops: Iterable[Shop]) -> Iterable[dict[str, str | int]]:
             "Genre": shop.genre,
             "Genre Slug": shop.genre_slug,
             "Release Date": shop.release_date,
+        }
+
+
+def skipped_shop_rows(skipped_shops: Iterable[SkippedShop]) -> Iterable[dict[str, str | int]]:
+    for skipped_shop in skipped_shops:
+        yield {
+            "Website": skipped_shop.website,
+            "Year": skipped_shop.year,
+            "Genre": skipped_shop.genre,
+            "Genre Slug": skipped_shop.genre_slug,
+            "Release Date": skipped_shop.release_date,
+            "Reason": skipped_shop.reason,
+            "Status Code": skipped_shop.status_code or "",
         }
 
 
@@ -403,17 +437,20 @@ def main() -> None:
         )
 
     all_shops: list[Shop] = []
+    skipped_shops: list[SkippedShop] = []
     combined_output_name = "selected.csv" if args.genre_slugs else "all.csv"
+    skipped_output_name = "selected_skipped.csv" if args.genre_slugs else "skipped.csv"
     total_genres = len(genres)
     for index, genre in enumerate(genres, start=1):
         print_progress(f"scraping genre {index}/{total_genres}: {genre.slug}")
-        shops = scrape_genre_shops(
+        shops, genre_skipped_shops = scrape_genre_shops(
             session,
             genre,
             args.throttle_seconds,
             max(1, args.workers),
         )
         all_shops.extend(shops)
+        skipped_shops.extend(genre_skipped_shops)
         write_csv(
             output_root / "by_genre" / f"{genre.slug}.csv",
             shop_rows(shops),
@@ -447,6 +484,21 @@ def main() -> None:
         ],
     )
     print(f"Wrote {len(all_shops)} shops to {output_root / combined_output_name}")
+
+    write_csv(
+        output_root / skipped_output_name,
+        skipped_shop_rows(skipped_shops),
+        [
+            "Website",
+            "Year",
+            "Genre",
+            "Genre Slug",
+            "Release Date",
+            "Reason",
+            "Status Code",
+        ],
+    )
+    print(f"Wrote {len(skipped_shops)} skipped shops to {output_root / skipped_output_name}")
 
 
 if __name__ == "__main__":
