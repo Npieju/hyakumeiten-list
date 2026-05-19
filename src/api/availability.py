@@ -227,6 +227,8 @@ def search_availability(
 	)
 	static_payload = search_shops(static_filters)
 	static_items = static_payload["items"]
+	static_total = static_payload["total"]
+	skip_live_fetch = static_total > live_check_limit
 	shop_ids = [item["shop_id"] for item in static_items]
 
 	connection = sqlite3.connect(filters.db_path)
@@ -286,6 +288,23 @@ def search_availability(
 						if is_cache_fresh(cached, now):
 							cache_hits += 1
 							provider_results.append(serialize_cache_row(cached, "cache"))
+							continue
+
+						if skip_live_fetch:
+							limited_live_checks += 1
+							provider_results.append(
+								{
+									"provider": link["provider"],
+									"status": "unknown",
+									"status_reason": "live_check_limit_exceeded",
+									"reservation_url": link["provider_url"],
+									"available_slots": [],
+									"checked_at": None,
+									"expires_at": None,
+									"raw_payload_hash": None,
+									"source": "skipped",
+								}
+							)
 							continue
 
 						if live_checks >= live_check_limit:
@@ -353,9 +372,9 @@ def search_availability(
 
 		denominator = cache_hits + live_checks
 		cache_hit_ratio = 0.0 if denominator == 0 else cache_hits / denominator
-		warning = "live_check_limit_exceeded" if limited_live_checks else None
+		warning = "live_check_limit_exceeded" if skip_live_fetch or limited_live_checks else None
 		return {
-			"total": len(items),
+			"total": static_total if skip_live_fetch else len(items),
 			"cache_hit_ratio": cache_hit_ratio,
 			"live_checks": live_checks,
 			"warning": warning,
