@@ -76,14 +76,15 @@
           </label>
 
           <label>
-            <span>Reservation Status</span>
+            <span>営業・予約状態</span>
             <select id="reservation-status-input" name="reservation_status">
               <option value="">All</option>
               <option value="bookable">予約可能</option>
               <option value="sold_out">空席なし</option>
-              <option value="booking_closed">受付終了</option>
-              <option value="not_supported">予約対象外</option>
-              <option value="provider_unlinked">未紐付け</option>
+              <option value="booking_closed">受付外</option>
+              <option value="temporarily_closed">休業</option>
+              <option value="not_supported">予約サイト対象外</option>
+              <option value="provider_unlinked">予約リンク未設定</option>
               <option value="provider_error">取得失敗</option>
               <option value="unknown">要確認</option>
             </select>
@@ -131,9 +132,10 @@
           <div class="map-legend">
             <span class="map-legend-item"><i class="map-legend-dot is-bookable"></i>予約可能</span>
             <span class="map-legend-item"><i class="map-legend-dot is-sold-out"></i>空席なし</span>
-            <span class="map-legend-item"><i class="map-legend-dot is-booking-closed"></i>受付終了</span>
+            <span class="map-legend-item"><i class="map-legend-dot is-booking-closed"></i>受付外</span>
+            <span class="map-legend-item"><i class="map-legend-dot is-temporarily-closed"></i>休業</span>
             <span class="map-legend-item"><i class="map-legend-dot is-not-supported"></i>予約対象外</span>
-            <span class="map-legend-item"><i class="map-legend-dot is-unlinked"></i>未紐付け</span>
+            <span class="map-legend-item"><i class="map-legend-dot is-unlinked"></i>未連携</span>
             <span class="map-legend-item"><i class="map-legend-dot is-skipped"></i>未評価</span>
           </div>
         </details>

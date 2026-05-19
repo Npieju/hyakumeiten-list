@@ -33,10 +33,10 @@ let fetchTimer = null;
 const STATUS_LABELS = {
   bookable: "予約可能",
   sold_out: "空席なし",
-  booking_closed: "受付終了",
-  temporarily_closed: "臨時休業",
-  not_supported: "予約対象外",
-  provider_unlinked: "未紐付け",
+  booking_closed: "受付外",
+  temporarily_closed: "休業",
+  not_supported: "予約サイト対象外",
+  provider_unlinked: "予約リンク未設定",
   provider_error: "取得失敗",
   unknown: "要確認",
 };
@@ -45,7 +45,7 @@ const STATUS_CLASS_NAMES = {
   bookable: "is-bookable",
   sold_out: "is-sold-out",
   booking_closed: "is-booking-closed",
-  temporarily_closed: "is-booking-closed",
+  temporarily_closed: "is-temporarily-closed",
   not_supported: "is-not-supported",
   provider_unlinked: "is-unlinked",
   provider_error: "is-error",
@@ -130,7 +130,7 @@ function currentFilterSummary() {
     const reservationStatus = document.getElementById("reservation-status-input").value;
     parts.push("Reservation On");
     if (reservationStatus) {
-      parts.push(`Status ${statusLabel(reservationStatus)}`);
+      parts.push(`営業・予約 ${statusLabel(reservationStatus)}`);
     }
   }
 

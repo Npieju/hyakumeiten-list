@@ -258,6 +258,10 @@ body {
   background: #9f8042;
 }
 
+.result-status-row.is-temporarily-closed .result-status-dot {
+  background: #6b7f3d;
+}
+
 .result-status-row.is-not-supported .result-status-dot,
 .result-status-row.is-unlinked .result-status-dot {
   background: #5c7299;
@@ -314,6 +318,11 @@ body {
 .is-booking-closed {
   background: #eadfca;
   color: #6d5324;
+}
+
+.is-temporarily-closed {
+  background: #dde4c9;
+  color: #445224;
 }
 
 .is-not-supported,
@@ -454,6 +463,10 @@ body {
   background: #9f8042;
 }
 
+.map-legend-dot.is-temporarily-closed {
+  background: #6b7f3d;
+}
+
 .map-legend-dot.is-not-supported {
   background: #5c7299;
 }
@@ -537,6 +550,10 @@ body {
 
 .map-pin.is-booking-closed span {
   background: #9f8042;
+}
+
+.map-pin.is-temporarily-closed span {
+  background: #6b7f3d;
 }
 
 .map-pin.is-not-supported span,
