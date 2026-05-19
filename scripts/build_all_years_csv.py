@@ -27,7 +27,6 @@ MERGED_GENRE_GROUPS = {
             "sushi_east",
             "sushi_tokyo",
             "sushi_west",
-            "tempura",
             "unagi",
         },
     },
@@ -64,6 +63,7 @@ MERGED_GENRE_GROUPS = {
             "okonomiyaki",
             "shokudo",
             "sukiyaki_shabushabu",
+            "tempura",
         },
     },
     "western_european": {
