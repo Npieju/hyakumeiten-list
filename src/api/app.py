@@ -9,7 +9,8 @@ from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from src.api.models import SearchResponse
+from src.api.availability import ReservationQuery, search_availability
+from src.api.models import AvailabilitySearchRequest, AvailabilitySearchResponse, SearchResponse
 from src.api.search import SearchFilters, search_shops
 
 
@@ -64,6 +65,40 @@ def shops_search(
 		offset=max(0, offset),
 	)
 	return search_shops(filters)
+
+
+@app.post("/v1/shops/availability-search", response_model=AvailabilitySearchResponse)
+def shops_availability_search(request: AvailabilitySearchRequest) -> dict[str, object]:
+	bbox = request.filters.bounding_box
+	filters = SearchFilters(
+		db_path=request.db_path,
+		years=request.filters.year,
+		genre_slugs=request.filters.genre_slug,
+		regions=request.filters.region,
+		prefectures=request.filters.prefecture,
+		name_query=request.filters.name_query,
+		address_query=request.filters.address_query,
+		min_lat=None if bbox is None else bbox.min_lat,
+		max_lat=None if bbox is None else bbox.max_lat,
+		min_lng=None if bbox is None else bbox.min_lng,
+		max_lng=None if bbox is None else bbox.max_lng,
+		has_multiple_years=request.filters.has_multiple_years,
+		limit=max(1, min(request.limit, 200)),
+		offset=max(0, request.offset),
+	)
+	reservation = ReservationQuery(
+		date=request.reservation.date,
+		party_size=request.reservation.party_size,
+		time_window=request.reservation.time_window,
+		statuses=request.reservation.status,
+		providers=request.reservation.provider,
+	)
+	return search_availability(
+		filters,
+		reservation,
+		limit=max(1, min(request.limit, 200)),
+		offset=max(0, request.offset),
+	)
 
 
 def main() -> None:
