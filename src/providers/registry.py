@@ -6,6 +6,7 @@ from src.providers.base import ProviderAdapter
 
 
 PROVIDER_MODULES = {
+	"tabelog": "src.providers.tabelog",
 	"example_provider": "src.providers.example_provider",
 }
 

@@ -146,6 +146,11 @@ def extract_tabelog_provider_shop_id(tabelog_url: str) -> str | None:
 	return path_tail or None
 
 
+def is_generic_tabelog_reservation_url(url: str) -> bool:
+	parsed = urlsplit(url)
+	return parsed.netloc == "yoyaku.tabelog.com" and parsed.path.rstrip("/") == "/yoyaku/tabelog_booking/send_remind"
+
+
 def normalize_text(value: str) -> str:
 	normalized = unicodedata.normalize("NFKC", value).strip().lower()
 	return re.sub(r"\s+", "", normalized)
@@ -266,18 +271,18 @@ def build_shop_records(
 		shop_genres.add((shop_id, year, genre_slug, genre_name))
 
 		tabelog_reservation_url = row.get("Tabelog Reservation URL", "").strip()
-		if tabelog_reservation_url:
+		if tabelog_reservation_url and not is_generic_tabelog_reservation_url(tabelog_reservation_url):
 			reservation_links[(shop_id, "tabelog")] = {
 				"shop_id": shop_id,
 				"provider": "tabelog",
 				"provider_shop_id": extract_tabelog_provider_shop_id(tabelog_url),
 				"provider_url": tabelog_reservation_url,
-				"capability_status": "not_supported",
+				"capability_status": "supported",
 				"match_status": "auto_linked",
 				"match_confidence": 1.0,
 				"matched_by": "scrape_hyakummeiten",
 				"last_verified_at": now,
-				"notes": "Seeded from Tabelog reservation metadata during scrape.",
+				"notes": "Seeded from Tabelog booking metadata during scrape.",
 			}
 
 	return shops, shop_years, shop_genres, reservation_links

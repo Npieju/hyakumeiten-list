@@ -485,9 +485,6 @@ async function refresh() {
       warningText.textContent = payload.warning === "live_check_limit_exceeded"
         ? "live check 上限に達したため、表示中に未評価の店舗が含まれます。条件を絞ってください。"
         : "";
-      if (providerInputValue() === "tabelog") {
-        warningText.textContent = "tabelog は予約ページへの導線表示のみです。空席可否の自動取得はまだ未実装です。" + (warningText.textContent ? ` ${warningText.textContent}` : "");
-      }
     } else {
       resultCount.textContent = String(payload.returned);
       statusText.textContent = `${payload.returned} / ${payload.total} shops`;

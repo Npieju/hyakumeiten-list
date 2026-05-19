@@ -1,4 +1,5 @@
 from __future__ import annotations
+from urllib.parse import parse_qsl , urlunparse, urlencode
 
 import argparse
 import csv
@@ -272,6 +273,7 @@ def parse_restaurant_json_ld(soup: BeautifulSoup) -> tuple[str, str, str, str]:
 
 
 def extract_reserve_action_url(shop_url: str, payload: object) -> str:
+    preferred_url = ""
     actions = payload if isinstance(payload, list) else [payload]
     for action in actions:
         if not isinstance(action, dict):
@@ -288,8 +290,35 @@ def extract_reserve_action_url(shop_url: str, payload: object) -> str:
             for candidate in candidates:
                 if not candidate:
                     continue
-                return urljoin(shop_url, str(candidate).strip())
-    return ""
+                absolute_url = urljoin(shop_url, str(candidate).strip())
+                parsed = urlparse(absolute_url)
+                if parsed.netloc in {"tabelog.com", "s.tabelog.com"} and (
+                    "cid=google_yoyaku" in parsed.query or "cid=faq_yoyaku" in parsed.query
+                ):
+                    return absolute_url
+                if not preferred_url and parsed.netloc in {"tabelog.com", "s.tabelog.com"}:
+                    preferred_url = absolute_url
+    return preferred_url
+
+
+def build_shop_booking_url(shop_url: str) -> str:
+    parsed = urlparse(shop_url)
+    query_pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    query_pairs = [(key, value) for key, value in query_pairs if key != "cid"]
+    query_pairs.append(("cid", "google_yoyaku"))
+    return urlunparse(parsed._replace(query=urlencode(query_pairs)))
+
+
+def has_tabelog_booking_widget(soup: BeautifulSoup) -> bool:
+    booking_params = soup.select_one("#js-booking-params")
+    if booking_params is not None and booking_params.get("data-booking-enabled") == "1":
+        return True
+
+    return bool(
+        soup.select_one(
+            ".js-show-yoyaku-modal-trigger, .rstdtl-side-yoyaku__booking, .js-rstdtl-booking-modal"
+        )
+    )
 
 
 def parse_tabelog_reservation_url(shop_url: str, soup: BeautifulSoup) -> str:
@@ -301,27 +330,21 @@ def parse_tabelog_reservation_url(shop_url: str, soup: BeautifulSoup) -> str:
         if reservation_url:
             return reservation_url
 
+    if not has_tabelog_booking_widget(soup):
+        return ""
+
     for anchor in soup.select("a[href]"):
         href = anchor.get("href", "").strip()
         if not href:
             continue
         absolute_url = urljoin(shop_url, href)
         parsed = urlparse(absolute_url)
-        if parsed.netloc == "yoyaku.tabelog.com":
+        if parsed.netloc in {"tabelog.com", "s.tabelog.com"} and (
+            "faq_yoyaku" in parsed.query or "google_yoyaku" in parsed.query
+        ):
             return absolute_url
-        if parsed.netloc == "tabelog.com" and "faq_yoyaku" in parsed.query:
-            return absolute_url
 
-    if soup.select_one(".js-show-yoyaku-modal-trigger, .rstdtl-side-yoyaku__booking"):
-        return shop_url
-
-    reserve_status = soup.select_one(".rstinfo-table__reserve-status")
-    if reserve_status is not None:
-        reserve_text = reserve_status.get_text(" ", strip=True)
-        if reserve_text and "予約可" in reserve_text:
-            return shop_url
-
-    return ""
+    return build_shop_booking_url(shop_url)
 
 
 def format_coordinate(value: object) -> str:
