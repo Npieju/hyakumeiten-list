@@ -44,7 +44,7 @@ def shops_search(
 	min_lng: float | None = None,
 	max_lng: float | None = None,
 	has_multiple_years: bool = False,
-	limit: int = 100,
+	limit: int = 300,
 	offset: int = 0,
 	db_path: str = "data/app/hyakummeiten.sqlite3",
 ) -> dict[str, object]:
@@ -61,7 +61,7 @@ def shops_search(
 		min_lng=min_lng,
 		max_lng=max_lng,
 		has_multiple_years=has_multiple_years,
-		limit=max(1, min(limit, 200)),
+		limit=max(1, min(limit, 500)),
 		offset=max(0, offset),
 	)
 	return search_shops(filters)
@@ -83,7 +83,7 @@ def shops_availability_search(request: AvailabilitySearchRequest) -> dict[str, o
 		min_lng=None if bbox is None else bbox.min_lng,
 		max_lng=None if bbox is None else bbox.max_lng,
 		has_multiple_years=request.filters.has_multiple_years,
-		limit=max(1, min(request.limit, 200)),
+		limit=max(1, min(request.limit, 500)),
 		offset=max(0, request.offset),
 	)
 	reservation = ReservationQuery(
@@ -96,7 +96,7 @@ def shops_availability_search(request: AvailabilitySearchRequest) -> dict[str, o
 	return search_availability(
 		filters,
 		reservation,
-		limit=max(1, min(request.limit, 200)),
+		limit=max(1, min(request.limit, 500)),
 		offset=max(0, request.offset),
 	)
 

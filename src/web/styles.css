@@ -266,6 +266,10 @@ body {
   background: #6b7f3d;
 }
 
+.result-status-row.is-link-only .result-status-dot {
+  background: #2f7b7a;
+}
+
 .result-status-row.is-not-supported .result-status-dot,
 .result-status-row.is-unlinked .result-status-dot {
   background: #5c7299;
@@ -334,10 +338,52 @@ body {
   color: #445224;
 }
 
+.is-link-only {
+  background: #d0ece7;
+  color: #1d5c5b;
+}
+
 .is-not-supported,
 .is-unlinked {
   background: #d7ddec;
   color: #33486b;
+}
+
+.provider-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.provider-name,
+.provider-slots,
+.provider-source,
+.provider-link,
+.provider-link-missing {
+  min-width: 0;
+}
+
+.provider-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.provider-link:hover {
+  text-decoration: underline;
+}
+
+.provider-link-missing,
+.provider-source,
+.provider-slots {
+  color: rgba(36, 29, 21, 0.65);
+}
+
+.popup-links-reservation {
+  margin-top: 8px;
 }
 
 .is-error,

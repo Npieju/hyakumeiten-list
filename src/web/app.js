@@ -37,6 +37,7 @@ const STATUS_LABELS = {
   sold_out: "空席なし",
   booking_closed: "受付外",
   temporarily_closed: "休業",
+  link_only: "予約リンクあり",
   not_supported: "予約サイト対象外",
   provider_unlinked: "予約リンク未設定",
   provider_error: "取得失敗",
@@ -49,6 +50,7 @@ const STATUS_CLASS_NAMES = {
   sold_out: "is-sold-out",
   booking_closed: "is-booking-closed",
   temporarily_closed: "is-temporarily-closed",
+  link_only: "is-link-only",
   not_supported: "is-not-supported",
   provider_unlinked: "is-unlinked",
   provider_error: "is-error",
@@ -62,6 +64,7 @@ const STATUS_SYMBOLS = {
   sold_out: "X",
   booking_closed: "-",
   temporarily_closed: "休",
+  link_only: "予",
   not_supported: "外",
   provider_unlinked: "連",
   provider_error: "!",
@@ -78,10 +81,22 @@ const RESERVATION_LEGEND_ITEMS = [
   { status: "sold_out", label: "空席なし" },
   { status: "booking_closed", label: "受付外" },
   { status: "temporarily_closed", label: "休業" },
+  { status: "link_only", label: "予約リンクあり" },
   { status: "not_supported", label: "予約対象外" },
   { status: "provider_unlinked", label: "未連携" },
   { status: "skipped", label: "未評価" },
 ];
+
+const SEARCH_LIMIT = 300;
+
+function providerInputValue() {
+  return document.getElementById("provider-input").value;
+}
+
+function hasReservationLink(shop) {
+  return Array.isArray(shop.providers)
+    && shop.providers.some((provider) => provider.reservation_url);
+}
 
 function reservationEnabled() {
   return reservationEnabledInput.checked;
@@ -111,6 +126,9 @@ function displayStatus(shop) {
   const status = summaryStatus(shop);
   if (hasSkippedProvider(shop) && status === "unknown") {
     return "skipped";
+  }
+  if (status === "not_supported" && hasReservationLink(shop)) {
+    return "link_only";
   }
   return status;
 }
@@ -223,7 +241,7 @@ function buildParams() {
   params.append("max_lat", String(bounds.getNorth()));
   params.append("min_lng", String(bounds.getWest()));
   params.append("max_lng", String(bounds.getEast()));
-  params.append("limit", "100");
+  params.append("limit", String(SEARCH_LIMIT));
 
   return params;
 }
@@ -236,7 +254,7 @@ function buildAvailabilityPayload() {
   const region = document.getElementById("region-input").value;
   const hasMultipleYears = document.getElementById("multiple-years-input").checked;
   const reservationStatus = document.getElementById("reservation-status-input").value;
-  const provider = document.getElementById("provider-input").value;
+  const provider = providerInputValue();
 
   const filters = {
     year: year ? [Number(year)] : [],
@@ -263,9 +281,36 @@ function buildAvailabilityPayload() {
       status: reservationStatus ? [reservationStatus] : [],
       provider: provider ? [provider] : [],
     },
-    limit: 100,
+    limit: SEARCH_LIMIT,
     offset: 0,
   };
+}
+
+function reservationLinkMarkup(provider) {
+  if (!provider.reservation_url) {
+    return '<span class="provider-link-missing">リンクなし</span>';
+  }
+
+  return `<a class="provider-link" href="${provider.reservation_url}" target="_blank" rel="noreferrer">予約ページ</a>`;
+}
+
+function reservationLinksMarkup(shop) {
+  if (!shop.providers || shop.providers.length === 0) {
+    return "";
+  }
+
+  const linkedProviders = shop.providers.filter((provider) => provider.reservation_url);
+  if (linkedProviders.length === 0) {
+    return "";
+  }
+
+  return `
+    <div class="popup-links popup-links-reservation">
+      ${linkedProviders
+        .map((provider) => `<a href="${provider.reservation_url}" target="_blank" rel="noreferrer">${provider.provider} 予約</a>`)
+        .join("")}
+    </div>
+  `;
 }
 
 function reservationSummaryMarkup(shop) {
@@ -303,6 +348,7 @@ function providerRowsMarkup(shop) {
           <span class="provider-name">${provider.provider || "unlinked"}</span>
           <span class="status-chip small ${providerStatusClass}">${providerStatusLabel}</span>
           <span class="provider-slots">${slots}</span>
+          ${reservationLinkMarkup(provider)}
           <span class="provider-source">${sourceLabel}</span>
         </div>
       `;
@@ -322,6 +368,7 @@ function shopPopup(shop) {
       <div>${shop.address}</div>
       <div class="popup-genres">${genres}</div>
       <div class="provider-list">${providerRowsMarkup(shop)}</div>
+      ${reservationLinksMarkup(shop)}
       <div class="popup-links">
         <a href="${shop.tabelog_url}" target="_blank" rel="noreferrer">Tabelog</a>
         <a href="${shop.google_maps_url}" target="_blank" rel="noreferrer">Google Maps</a>
@@ -349,6 +396,7 @@ function renderList(items) {
         ${statusMetaMarkup(shop)}
         <span>${shop.address}</span>
         <small>${shop.genres.map((genre) => genre.genre_slug).join(", ")}</small>
+        ${reservationEnabled() ? `<small>${providerRowsMarkup(shop)}</small>` : ""}
       </button>
     `;
 
@@ -437,12 +485,15 @@ async function refresh() {
       warningText.textContent = payload.warning === "live_check_limit_exceeded"
         ? "live check 上限に達したため、表示中に未評価の店舗が含まれます。条件を絞ってください。"
         : "";
+      if (providerInputValue() === "tabelog") {
+        warningText.textContent = "tabelog は予約ページへの導線表示のみです。空席可否の自動取得はまだ未実装です。" + (warningText.textContent ? ` ${warningText.textContent}` : "");
+      }
     } else {
       resultCount.textContent = String(payload.returned);
       statusText.textContent = `${payload.returned} / ${payload.total} shops`;
       updateMapHud(`${payload.returned} / ${payload.total} shops`, currentFilterSummary());
       warningText.textContent = payload.truncated && payload.warning
-        ? "表示範囲内の件数が多いため、一部のみ表示しています。"
+        ? `表示範囲内の件数が多いため、先頭 ${SEARCH_LIMIT} 件のみ表示しています。`
         : "";
     }
   } catch (error) {
