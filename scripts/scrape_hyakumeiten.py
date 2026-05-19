@@ -22,10 +22,21 @@ HYAKUMEITEN_ROOT = f"{BASE_URL}/hyakumeiten"
 ADDRESS_OVERRIDES = {
     "https://tabelog.com/tokyo/A1303/A130302/13154404/": "東京都豊島区南大塚1-50-5 コーポ大塚マンション 1F",
     "https://tabelog.com/hokkaido/A0104/A010401/1001167/": "北海道旭川市東5条11丁目2-1",
+    "https://tabelog.com/tokyo/A1307/A130703/13213368/": "東京都渋谷区広尾5-1-32 ST広尾 2F",
+    "https://tabelog.com/fukuoka/A4001/A400101/40001706/": "福岡県福岡市博多区博多駅前4-3-11",
+    "https://tabelog.com/chiba/A1201/A120101/12046922/": "千葉県千葉市中央区中央3-15-4",
+    "https://tabelog.com/osaka/A2701/A270101/27113792/": "大阪府大阪市北区堂山町16-2",
+    "https://tabelog.com/aichi/A2301/A230101/23082892/": "愛知県名古屋市中区栄2-14-1",
 }
 COORDINATE_OVERRIDES = {
     "https://tabelog.com/tokyo/A1303/A130302/13154404/": (35.7317076, 139.7292447),
     "https://tabelog.com/hokkaido/A0104/A010401/1001167/": (43.7801047, 142.3772754),
+    "https://tabelog.com/tokyo/A1307/A130703/13213368/": (35.6515, 139.7226),
+    "https://tabelog.com/fukuoka/A4001/A400101/40001706/": (33.5855, 130.4150),
+    "https://tabelog.com/chiba/A1201/A120101/12046922/": (35.6074, 140.1227),
+    "https://tabelog.com/kanagawa/A1401/A140306/14072173/": (35.4746, 139.5463),
+    "https://tabelog.com/osaka/A2701/A270101/27113792/": (34.7041, 135.5036),
+    "https://tabelog.com/aichi/A2301/A230101/23082892/": (35.1654, 136.9015),
 }
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) "
@@ -75,6 +86,7 @@ class Shop:
     address: str
     description: str
     website: str
+    tabelog_reservation_url: str
     google_maps_url: str
     latitude: str
     longitude: str
@@ -205,7 +217,7 @@ def resolve_genres(session: requests.Session, year: int) -> list[Genre]:
     return sorted(genres, key=lambda genre: genre.slug)
 
 
-def parse_restaurant_json_ld(soup: BeautifulSoup) -> tuple[str, str, str, str]:
+def iter_restaurant_json_ld(soup: BeautifulSoup) -> Iterable[dict[str, object]]:
     for script in soup.select('script[type="application/ld+json"]'):
         raw_text = script.string or script.get_text(strip=True)
         if not raw_text:
@@ -235,6 +247,11 @@ def parse_restaurant_json_ld(soup: BeautifulSoup) -> tuple[str, str, str, str]:
             )
 
         for restaurant in candidates:
+            yield restaurant
+
+
+def parse_restaurant_json_ld(soup: BeautifulSoup) -> tuple[str, str, str, str]:
+    for restaurant in iter_restaurant_json_ld(soup):
             name = str(restaurant.get("name", "")).strip()
             address_payload = restaurant.get("address") or {}
             if not isinstance(address_payload, dict):
@@ -252,6 +269,59 @@ def parse_restaurant_json_ld(soup: BeautifulSoup) -> tuple[str, str, str, str]:
                 return name, address, latitude, longitude
 
     return "", "", "", ""
+
+
+def extract_reserve_action_url(shop_url: str, payload: object) -> str:
+    actions = payload if isinstance(payload, list) else [payload]
+    for action in actions:
+        if not isinstance(action, dict):
+            continue
+        if action.get("@type") != "ReserveAction":
+            continue
+        targets = action.get("target")
+        targets = targets if isinstance(targets, list) else [targets]
+        for target in targets:
+            if isinstance(target, dict):
+                candidates = [target.get("urlTemplate"), target.get("url")]
+            else:
+                candidates = [target]
+            for candidate in candidates:
+                if not candidate:
+                    continue
+                return urljoin(shop_url, str(candidate).strip())
+    return ""
+
+
+def parse_tabelog_reservation_url(shop_url: str, soup: BeautifulSoup) -> str:
+    for restaurant in iter_restaurant_json_ld(soup):
+        reservation_url = extract_reserve_action_url(
+            shop_url,
+            restaurant.get("potentialAction"),
+        )
+        if reservation_url:
+            return reservation_url
+
+    for anchor in soup.select("a[href]"):
+        href = anchor.get("href", "").strip()
+        if not href:
+            continue
+        absolute_url = urljoin(shop_url, href)
+        parsed = urlparse(absolute_url)
+        if parsed.netloc == "yoyaku.tabelog.com":
+            return absolute_url
+        if parsed.netloc == "tabelog.com" and "faq_yoyaku" in parsed.query:
+            return absolute_url
+
+    if soup.select_one(".js-show-yoyaku-modal-trigger, .rstdtl-side-yoyaku__booking"):
+        return shop_url
+
+    reserve_status = soup.select_one(".rstinfo-table__reserve-status")
+    if reserve_status is not None:
+        reserve_text = reserve_status.get_text(" ", strip=True)
+        if reserve_text and "予約可" in reserve_text:
+            return shop_url
+
+    return ""
 
 
 def format_coordinate(value: object) -> str:
@@ -337,6 +407,7 @@ def fetch_shop(
                     address=ADDRESS_OVERRIDES.get(shop_link.url, ""),
                     description=f"食べログ {genre.title} 百名店 {genre.year}",
                     website=shop_link.url,
+                    tabelog_reservation_url="",
                     google_maps_url=build_google_maps_url(
                         ADDRESS_OVERRIDES.get(shop_link.url, shop_link.listed_area),
                         shop_link.listed_name,
@@ -374,6 +445,7 @@ def fetch_shop(
     override_latitude, override_longitude = COORDINATE_OVERRIDES.get(shop_link.url, ("", ""))
     latitude = format_coordinate(override_latitude or latitude)
     longitude = format_coordinate(override_longitude or longitude)
+    tabelog_reservation_url = parse_tabelog_reservation_url(shop_link.url, soup)
 
     description = f"食べログ {genre.title} 百名店 {genre.year}"
     return (
@@ -382,6 +454,7 @@ def fetch_shop(
             address=address,
             description=description,
             website=shop_link.url,
+            tabelog_reservation_url=tabelog_reservation_url,
             google_maps_url=build_google_maps_url(address, name),
             latitude=latitude,
             longitude=longitude,
@@ -480,6 +553,7 @@ def shop_rows(shops: Iterable[Shop]) -> Iterable[dict[str, str | int]]:
             "Address": shop.address,
             "Description": shop.description,
             "Website": shop.website,
+            "Tabelog Reservation URL": shop.tabelog_reservation_url,
             "Google Maps URL": shop.google_maps_url,
             "Latitude": shop.latitude,
             "Longitude": shop.longitude,
@@ -575,6 +649,7 @@ def main() -> None:
                 "Address",
                 "Description",
                 "Website",
+                "Tabelog Reservation URL",
                 "Google Maps URL",
                 "Latitude",
                 "Longitude",
@@ -594,6 +669,7 @@ def main() -> None:
             "Address",
             "Description",
             "Website",
+            "Tabelog Reservation URL",
             "Google Maps URL",
             "Latitude",
             "Longitude",

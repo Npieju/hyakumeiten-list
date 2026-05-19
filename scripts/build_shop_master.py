@@ -141,6 +141,11 @@ def build_shop_id(tabelog_url: str) -> str:
 	return f"tabelog:{hash_value}"
 
 
+def extract_tabelog_provider_shop_id(tabelog_url: str) -> str | None:
+	path_tail = urlsplit(tabelog_url).path.rstrip("/").split("/")[-1]
+	return path_tail or None
+
+
 def normalize_text(value: str) -> str:
 	normalized = unicodedata.normalize("NFKC", value).strip().lower()
 	return re.sub(r"\s+", "", normalized)
@@ -189,10 +194,12 @@ def build_shop_records(
 	dict[str, dict[str, str]],
 	dict[tuple[str, int], str],
 	set[tuple[str, int, str, str]],
+	dict[tuple[str, str], dict[str, str | float | None]],
 ]:
 	shops: dict[str, dict[str, str]] = {}
 	shop_years: dict[tuple[str, int], str] = {}
 	shop_genres: set[tuple[str, int, str, str]] = set()
+	reservation_links: dict[tuple[str, str], dict[str, str | float | None]] = {}
 
 	for fallback_year, row in source_rows:
 		tabelog_url = canonicalize_tabelog_url(row.get("Website", ""))
@@ -258,7 +265,22 @@ def build_shop_records(
 			raise SystemExit(f"Missing Genre: {row}")
 		shop_genres.add((shop_id, year, genre_slug, genre_name))
 
-	return shops, shop_years, shop_genres
+		tabelog_reservation_url = row.get("Tabelog Reservation URL", "").strip()
+		if tabelog_reservation_url:
+			reservation_links[(shop_id, "tabelog")] = {
+				"shop_id": shop_id,
+				"provider": "tabelog",
+				"provider_shop_id": extract_tabelog_provider_shop_id(tabelog_url),
+				"provider_url": tabelog_reservation_url,
+				"capability_status": "not_supported",
+				"match_status": "auto_linked",
+				"match_confidence": 1.0,
+				"matched_by": "scrape_hyakummeiten",
+				"last_verified_at": now,
+				"notes": "Seeded from Tabelog reservation metadata during scrape.",
+			}
+
+	return shops, shop_years, shop_genres, reservation_links
 
 
 def create_database(output_path: Path) -> sqlite3.Connection:
@@ -276,6 +298,7 @@ def insert_records(
 	shops: dict[str, dict[str, str | float]],
 	shop_years: dict[tuple[str, int], str],
 	shop_genres: set[tuple[str, int, str, str]],
+	reservation_links: dict[tuple[str, str], dict[str, str | float | None]],
 	now: str,
 ) -> None:
 	connection.executemany(
@@ -343,6 +366,38 @@ def insert_records(
 		sorted(shop_genres),
 	)
 
+	connection.executemany(
+		"""
+		INSERT INTO reservation_links (
+			shop_id,
+			provider,
+			provider_shop_id,
+			provider_url,
+			capability_status,
+			match_status,
+			match_confidence,
+			matched_by,
+			last_verified_at,
+			notes
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		""",
+		[
+			(
+				link["shop_id"],
+				link["provider"],
+				link["provider_shop_id"],
+				link["provider_url"],
+				link["capability_status"],
+				link["match_status"],
+				link["match_confidence"],
+				link["matched_by"],
+				link["last_verified_at"],
+				link["notes"],
+			)
+			for _, link in sorted(reservation_links.items())
+		],
+	)
+
 	connection.commit()
 
 
@@ -353,17 +408,18 @@ def main() -> None:
 	now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 	source_rows = iter_source_rows(input_root)
-	shops, shop_years, shop_genres = build_shop_records(source_rows, now)
+	shops, shop_years, shop_genres, reservation_links = build_shop_records(source_rows, now)
 
 	connection = create_database(output_path)
 	try:
-		insert_records(connection, shops, shop_years, shop_genres, now)
+		insert_records(connection, shops, shop_years, shop_genres, reservation_links, now)
 	finally:
 		connection.close()
 
 	print(f"Wrote {len(shops)} shops to {output_path}")
 	print(f"Wrote {len(shop_years)} shop_years rows to {output_path}")
 	print(f"Wrote {len(shop_genres)} shop_genres rows to {output_path}")
+	print(f"Wrote {len(reservation_links)} reservation_links rows to {output_path}")
 
 
 if __name__ == "__main__":
