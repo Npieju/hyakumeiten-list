@@ -1,0 +1,3 @@
+review_id,shop_id,provider,decision,provider_shop_id,provider_url,capability_status,notes
+101,tabelog:sample-shop-001,example_provider,approve,provider-shop-001,https://example.com/shops/provider-shop-001,supported,confirmed by manual review
+102,tabelog:sample-shop-002,example_provider,reject,,,unknown,not the same restaurant

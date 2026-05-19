@@ -5,5 +5,6 @@ __pycache__/
 get-pip.py
 data/*/selected.csv
 data/*/selected_unavailable.csv
+data/linkage/
 data/app/*.sqlite3
 data/app/*.sqlite3-*
