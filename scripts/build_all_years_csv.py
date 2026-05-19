@@ -1,14 +1,24 @@
 from __future__ import annotations
 
+import shutil
 import argparse
 import csv
 from pathlib import Path
-import shutil
 
 from build_region_csv import PREFECTURE_TO_REGION, REGION_LABELS, extract_prefecture
 
 
 MULTI_VALUE_SEPARATOR = " | "
+REGIONAL_GENRE_SUFFIXES = (
+    "_east",
+    "_west",
+    "_tokyo",
+    "_aichi",
+    "_hokkaido",
+    "_kanagawa",
+    "_osaka",
+    "_kagawa",
+)
 MY_MAP_GROUPS = {
     "lunch": {
         "label": "Lunch",
@@ -272,6 +282,13 @@ def coordinates_match(current: str, candidate: str) -> bool:
     return current == candidate
 
 
+def normalize_genre_slug(raw_slug: str) -> str:
+    for suffix in REGIONAL_GENRE_SUFFIXES:
+        if raw_slug.endswith(suffix):
+            return raw_slug[: -len(suffix)]
+    return raw_slug
+
+
 def collect_group_rows(
     rows: list[dict[str, str]],
 ) -> tuple[dict[str, dict[str, list[dict[str, str]]]], set[str]]:
@@ -298,6 +315,23 @@ def collect_group_rows(
         matched_genre_slugs.clear()
 
     return grouped_rows, unmatched_genre_slugs
+
+
+def collect_neutral_genre_rows(
+    rows: list[dict[str, str]],
+) -> dict[str, list[dict[str, str]]]:
+    grouped_rows: dict[str, list[dict[str, str]]] = {}
+
+    for row in rows:
+        normalized_slugs = {
+            normalize_genre_slug(raw_slug)
+            for raw_slug in split_multi_value(row.get("Genre Slug", ""))
+            if raw_slug
+        }
+        for normalized_slug in sorted(normalized_slugs):
+            grouped_rows.setdefault(normalized_slug, []).append(row)
+
+    return grouped_rows
 
 
 def write_group_outputs(
@@ -341,6 +375,7 @@ def main() -> None:
     input_root = Path(args.input_dir)
     output_root = Path(args.output_dir)
     by_region_dir = output_root / "by_region"
+    by_genre_dir = output_root / "by_genre"
     for_mymap_dir = output_root / "for_mymap"
 
     source_paths = sorted(
@@ -412,6 +447,7 @@ def main() -> None:
         raise SystemExit(f"No CSV header found in {input_root}")
 
     all_rows = list(aggregated_rows_by_website.values())
+    neutral_genre_rows = collect_neutral_genre_rows(all_rows)
     grouped_rows, unmatched_genre_slugs = collect_group_rows(all_rows)
     if unmatched_genre_slugs:
         unmatched_list = ", ".join(sorted(unmatched_genre_slugs))
@@ -428,6 +464,7 @@ def main() -> None:
 
     output_root.mkdir(parents=True, exist_ok=True)
     by_region_dir.mkdir(parents=True, exist_ok=True)
+    by_genre_dir.mkdir(parents=True, exist_ok=True)
     for_mymap_dir.mkdir(parents=True, exist_ok=True)
 
     legacy_by_genre_dir = output_root / "by_genre"
@@ -459,6 +496,17 @@ def main() -> None:
             f"Wrote {len(rows)} rows to {target_path}"
             f" ({REGION_LABELS[region_slug]})"
         )
+
+    write_group_outputs(
+        by_genre_dir,
+        neutral_genre_rows,
+        {
+            genre_slug: {"label": genre_slug}
+            for genre_slug in sorted(neutral_genre_rows)
+        },
+        fieldnames,
+        "genre",
+    )
 
     for mymap_group_slug, mymap_group in MY_MAP_GROUPS.items():
         write_group_outputs(

@@ -23,7 +23,8 @@
 7. `data/<year>/by_region/*.csv`
 8. `data/all_years/all.csv`
 9. `data/all_years/by_region/*.csv`
-10. `data/all_years/for_mymap/*/*.csv`
+10. `data/all_years/by_genre/*.csv`
+11. `data/all_years/for_mymap/*/*.csv`
 
 ## Directory Layout
 
@@ -41,7 +42,8 @@
 
 1. `data/all_years/all.csv`: 全年度を `Website` 単位で 1 行にまとめた一覧
 2. `data/all_years/by_region/*.csv`: `data/all_years/all.csv` の地域別一覧
-3. `data/all_years/for_mymap/*/*.csv`: `data/all_years/all.csv` を My Maps 向け用途別 directory に再分割した一覧
+3. `data/all_years/by_genre/*.csv`: `data/all_years/all.csv` を地域違いだけ吸収した基準 genre 一覧
+4. `data/all_years/for_mymap/*/*.csv`: `data/all_years/all.csv` を My Maps 向け用途別 directory に再分割した一覧
 
 ## Source Of Truth Rules
 
@@ -213,6 +215,22 @@ Warning:
 
 1. `Year` と `Genre` の位置対応は保証しない
 2. このファイル単独から年ごとの `shop_genres` を復元してはならない
+
+### `data/all_years/by_genre/*.csv`
+
+`data/all_years/all.csv` を、同一ジャンルの地域別 slug だけを統合して再分割した基準出力。
+
+Examples:
+
+1. `ramen_tokyo`, `ramen_east`, `ramen_west` は `data/all_years/by_genre/ramen.csv` にまとめる
+2. `italian_tokyo`, `italian_east`, `italian_west` は `data/all_years/by_genre/italian.csv` にまとめる
+3. `tempura`, `unagi`, `tonkatsu` のような standalone slug は個別ファイルのままにする
+
+Rules:
+
+1. 地域違い以外の統合はしない
+2. 同じ店舗が複数の genre に属する場合は、該当する複数ファイルに現れてよい
+3. 列構成は `data/all_years/all.csv` と同一
 
 ### `data/all_years/for_mymap/*/*.csv`
 
