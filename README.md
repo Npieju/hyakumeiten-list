@@ -110,23 +110,11 @@ python3 scripts/build_all_years_csv.py
 この集計では、同じ `Website` の店舗は 1 行にまとめます。
 `Year`、`Genre`、`Genre Slug`、`Release Date` は ` | ` 区切りの複数値になります。
 
-Google My Maps の 10 layer 制限に合わせて、`data/all_years/by_genre/*.csv` には近い genre をまとめた 10 分類も出力します。地域違いの slug は同じファイルに統合されます。
-
-さらに My Maps 用の使い分けとして、同じ grouped CSV を `data/all_years/for_mymap/` 配下に `lunch` / `dinner` / `snack` の directory へ分けて出力します。各 directory の中身は 10 ファイル未満に抑えます。
+Google My Maps の 10 layer 制限に合わせて、`data/all_years/for_mymap/` 配下に `lunch` / `dinner` / `snack` の directory を出力します。各 directory は 10 未満の CSV に抑えつつ、余計な圧縮は避けて、同じジャンルの地域違いだけを主にまとめます。
 
 出力先:
 
 - `data/all_years/all.csv`
-- `data/all_years/by_genre/ramen.csv`
-- `data/all_years/by_genre/sushi_seafood.csv`
-- `data/all_years/by_genre/meat_grill.csv`
-- `data/all_years/by_genre/udon_soba.csv`
-- `data/all_years/by_genre/japanese_kitchen.csv`
-- `data/all_years/by_genre/western_european.csv`
-- `data/all_years/by_genre/asian_chinese.csv`
-- `data/all_years/by_genre/sweets_cafe.csv`
-- `data/all_years/by_genre/bakery_fastfood.csv`
-- `data/all_years/by_genre/curry_izakaya_bar.csv`
 - `data/all_years/by_region/tohoku_hokkaido.csv`
 - `data/all_years/by_region/kanto.csv`
 - `data/all_years/by_region/chubu.csv`

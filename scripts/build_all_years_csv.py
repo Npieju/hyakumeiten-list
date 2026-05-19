@@ -3,162 +3,214 @@ from __future__ import annotations
 import argparse
 import csv
 from pathlib import Path
+import shutil
 
 from build_region_csv import PREFECTURE_TO_REGION, REGION_LABELS, extract_prefecture
 
 
 MULTI_VALUE_SEPARATOR = " | "
-MERGED_GENRE_GROUPS = {
-    "ramen": {
-        "label": "Ramen",
-        "genre_slugs": {
-            "ramen_aichi",
-            "ramen_east",
-            "ramen_hokkaido",
-            "ramen_kanagawa",
-            "ramen_osaka",
-            "ramen_tokyo",
-            "ramen_west",
-        },
-    },
-    "sushi_seafood": {
-        "label": "Sushi & Seafood",
-        "genre_slugs": {
-            "sushi_east",
-            "sushi_tokyo",
-            "sushi_west",
-            "unagi",
-        },
-    },
-    "meat_grill": {
-        "label": "Meat & Grill",
-        "genre_slugs": {
-            "steak_east",
-            "steak_west",
-            "tonkatsu",
-            "toriryori",
-            "yakitori_east",
-            "yakitori_west",
-            "yakiniku_east",
-            "yakiniku_tokyo",
-            "yakiniku_west",
-        },
-    },
-    "udon_soba": {
-        "label": "Udon & Soba",
-        "genre_slugs": {
-            "soba_east",
-            "soba_west",
-            "udon_east",
-            "udon_kagawa",
-            "udon_west",
-        },
-    },
-    "japanese_kitchen": {
-        "label": "Japanese Kitchen",
-        "genre_slugs": {
-            "japanese_east",
-            "japanese_tokyo",
-            "japanese_west",
-            "okonomiyaki",
-            "shokudo",
-            "sukiyaki_shabushabu",
-            "tempura",
-        },
-    },
-    "western_european": {
-        "label": "Western & European",
-        "genre_slugs": {
-            "creative_innovative",
-            "french_east",
-            "french_tokyo",
-            "french_west",
-            "italian_east",
-            "italian_tokyo",
-            "italian_west",
-            "spanish",
-            "yoshoku_east",
-            "yoshoku_west",
-        },
-    },
-    "asian_chinese": {
-        "label": "Asian & Chinese",
-        "genre_slugs": {
-            "asia_ethnic_east",
-            "asia_ethnic_tokyo",
-            "asia_ethnic_west",
-            "chinese_east",
-            "chinese_tokyo",
-            "chinese_west",
-            "gyoza",
-        },
-    },
-    "sweets_cafe": {
-        "label": "Sweets & Cafe",
-        "genre_slugs": {
-            "cafe_east",
-            "cafe_west",
-            "ice_gelato",
-            "kissaten",
-            "sweets_east",
-            "sweets_tokyo",
-            "sweets_west",
-            "wagashi_east",
-            "wagashi_tokyo",
-            "wagashi_west",
-        },
-    },
-    "bakery_fastfood": {
-        "label": "Bakery & Fast Food",
-        "genre_slugs": {
-            "bread_east",
-            "bread_tokyo",
-            "bread_west",
-            "hamburger",
-            "pizza",
-        },
-    },
-    "curry_izakaya_bar": {
-        "label": "Curry, Izakaya & Bar",
-        "genre_slugs": {
-            "bar",
-            "curry_east",
-            "curry_tokyo",
-            "curry_west",
-            "izakaya_east",
-            "izakaya_west",
-            "tachinomi",
-        },
-    },
-}
 MY_MAP_GROUPS = {
     "lunch": {
         "label": "Lunch",
-        "genre_groups": [
-            "ramen",
-            "udon_soba",
-            "asian_chinese",
-            "bakery_fastfood",
-            "curry_izakaya_bar",
-        ],
+        "outputs": {
+            "ramen": {
+                "label": "Ramen",
+                "genre_slugs": {
+                    "ramen_aichi",
+                    "ramen_east",
+                    "ramen_hokkaido",
+                    "ramen_kanagawa",
+                    "ramen_osaka",
+                    "ramen_tokyo",
+                    "ramen_west",
+                },
+            },
+            "udon_soba": {
+                "label": "Udon & Soba",
+                "genre_slugs": {
+                    "soba_east",
+                    "soba_west",
+                    "udon_east",
+                    "udon_kagawa",
+                    "udon_west",
+                },
+            },
+            "curry_ethnic": {
+                "label": "Curry & Ethnic",
+                "genre_slugs": {
+                    "asia_ethnic_east",
+                    "asia_ethnic_tokyo",
+                    "asia_ethnic_west",
+                    "curry_east",
+                    "curry_tokyo",
+                    "curry_west",
+                },
+            },
+            "chinese_gyoza": {
+                "label": "Chinese & Gyoza",
+                "genre_slugs": {
+                    "chinese_east",
+                    "chinese_tokyo",
+                    "chinese_west",
+                    "gyoza",
+                },
+            },
+            "sushi_unagi_tempura": {
+                "label": "Sushi, Unagi & Tempura",
+                "genre_slugs": {
+                    "sushi_east",
+                    "sushi_tokyo",
+                    "sushi_west",
+                    "tempura",
+                    "unagi",
+                },
+            },
+            "japanese_shokudo": {
+                "label": "Japanese & Shokudo",
+                "genre_slugs": {
+                    "japanese_east",
+                    "japanese_tokyo",
+                    "japanese_west",
+                    "shokudo",
+                    "sukiyaki_shabushabu",
+                },
+            },
+            "tonkatsu": {
+                "label": "Tonkatsu",
+                "genre_slugs": {"tonkatsu"},
+            },
+            "yoshoku_hamburger": {
+                "label": "Yoshoku & Hamburger",
+                "genre_slugs": {
+                    "hamburger",
+                    "yoshoku_east",
+                    "yoshoku_west",
+                },
+            },
+            "okonomiyaki": {
+                "label": "Okonomiyaki",
+                "genre_slugs": {"okonomiyaki"},
+            },
+        },
     },
     "dinner": {
         "label": "Dinner",
-        "genre_groups": [
-            "sushi_seafood",
-            "meat_grill",
-            "japanese_kitchen",
-            "western_european",
-            "asian_chinese",
-            "curry_izakaya_bar",
-        ],
+        "outputs": {
+            "sushi_unagi_tempura": {
+                "label": "Sushi, Unagi & Tempura",
+                "genre_slugs": {
+                    "sushi_east",
+                    "sushi_tokyo",
+                    "sushi_west",
+                    "tempura",
+                    "unagi",
+                },
+            },
+            "japanese_kappo": {
+                "label": "Japanese Dinner",
+                "genre_slugs": {
+                    "japanese_east",
+                    "japanese_tokyo",
+                    "japanese_west",
+                    "sukiyaki_shabushabu",
+                },
+            },
+            "yakitori_toriryori": {
+                "label": "Yakitori & Chicken",
+                "genre_slugs": {
+                    "toriryori",
+                    "yakitori_east",
+                    "yakitori_west",
+                },
+            },
+            "yakiniku": {
+                "label": "Yakiniku",
+                "genre_slugs": {
+                    "yakiniku_east",
+                    "yakiniku_tokyo",
+                    "yakiniku_west",
+                },
+            },
+            "steak": {
+                "label": "Steak",
+                "genre_slugs": {
+                    "steak_east",
+                    "steak_west",
+                },
+            },
+            "izakaya_tachinomi": {
+                "label": "Izakaya & Tachinomi",
+                "genre_slugs": {
+                    "izakaya_east",
+                    "izakaya_west",
+                    "tachinomi",
+                },
+            },
+            "italian_pizza": {
+                "label": "Italian & Pizza",
+                "genre_slugs": {
+                    "italian_east",
+                    "italian_tokyo",
+                    "italian_west",
+                    "pizza",
+                },
+            },
+            "french_spanish_innovative": {
+                "label": "French, Spanish & Innovative",
+                "genre_slugs": {
+                    "creative_innovative",
+                    "french_east",
+                    "french_tokyo",
+                    "french_west",
+                    "spanish",
+                },
+            },
+            "bar": {
+                "label": "Bar",
+                "genre_slugs": {"bar"},
+            },
+        },
     },
     "snack": {
         "label": "Snack & Cafe",
-        "genre_groups": [
-            "sweets_cafe",
-            "bakery_fastfood",
-        ],
+        "outputs": {
+            "sweets": {
+                "label": "Sweets",
+                "genre_slugs": {
+                    "sweets_east",
+                    "sweets_tokyo",
+                    "sweets_west",
+                },
+            },
+            "wagashi": {
+                "label": "Wagashi",
+                "genre_slugs": {
+                    "wagashi_east",
+                    "wagashi_tokyo",
+                    "wagashi_west",
+                },
+            },
+            "cafe_kissaten": {
+                "label": "Cafe & Kissaten",
+                "genre_slugs": {
+                    "cafe_east",
+                    "cafe_west",
+                    "kissaten",
+                },
+            },
+            "bread": {
+                "label": "Bread",
+                "genre_slugs": {
+                    "bread_east",
+                    "bread_tokyo",
+                    "bread_west",
+                },
+            },
+            "ice_gelato": {
+                "label": "Ice & Gelato",
+                "genre_slugs": {"ice_gelato"},
+            },
+        },
     },
 }
 
@@ -214,33 +266,28 @@ def coordinates_match(current: str, candidate: str) -> bool:
 
 def collect_group_rows(
     rows: list[dict[str, str]],
-) -> tuple[dict[str, list[dict[str, str]]], set[str]]:
-    grouped_rows = {group_slug: [] for group_slug in MERGED_GENRE_GROUPS}
+) -> tuple[dict[str, dict[str, list[dict[str, str]]]], set[str]]:
+    grouped_rows = {
+        mymap_slug: {output_slug: [] for output_slug in mymap_group["outputs"]}
+        for mymap_slug, mymap_group in MY_MAP_GROUPS.items()
+    }
     unmatched_genre_slugs: set[str] = set()
+    matched_genre_slugs = set()
 
     for row in rows:
         row_genre_slugs = set(split_multi_value(row.get("Genre Slug", "")))
         if not row_genre_slugs:
             continue
 
-        matched_group = False
-        for group_slug, group in MERGED_GENRE_GROUPS.items():
-            if row_genre_slugs & group["genre_slugs"]:
-                grouped_rows[group_slug].append(row)
-                matched_group = True
+        for mymap_slug, mymap_group in MY_MAP_GROUPS.items():
+            for output_slug, output_group in mymap_group["outputs"].items():
+                group_slugs = output_group["genre_slugs"]
+                if row_genre_slugs & group_slugs:
+                    grouped_rows[mymap_slug][output_slug].append(row)
+                    matched_genre_slugs.update(row_genre_slugs & group_slugs)
 
-        if not matched_group:
-            unmatched_genre_slugs.update(row_genre_slugs)
-            continue
-
-        matched_slugs = set().union(
-            *[
-                group["genre_slugs"]
-                for group in MERGED_GENRE_GROUPS.values()
-                if row_genre_slugs & group["genre_slugs"]
-            ]
-        )
-        unmatched_genre_slugs.update(row_genre_slugs - matched_slugs)
+        unmatched_genre_slugs.update(row_genre_slugs - matched_genre_slugs)
+        matched_genre_slugs.clear()
 
     return grouped_rows, unmatched_genre_slugs
 
@@ -281,26 +328,11 @@ def write_group_outputs(
             f"Wrote {len(rows)} rows to {target_path}"
             f" ({group['label']})"
         )
-
-
-def collect_mymap_rows(
-    grouped_rows: dict[str, list[dict[str, str]]],
-) -> dict[str, list[dict[str, str]]]:
-    mymap_rows: dict[str, list[dict[str, str]]] = {}
-    for mymap_group_slug, mymap_group in MY_MAP_GROUPS.items():
-        rows: list[dict[str, str]] = []
-        for genre_group_slug in mymap_group["genre_groups"]:
-            rows.extend(grouped_rows[genre_group_slug])
-        mymap_rows[mymap_group_slug] = rows
-    return mymap_rows
-
-
 def main() -> None:
     args = parse_args()
     input_root = Path(args.input_dir)
     output_root = Path(args.output_dir)
     by_region_dir = output_root / "by_region"
-    by_genre_dir = output_root / "by_genre"
     for_mymap_dir = output_root / "for_mymap"
 
     source_paths = sorted(
@@ -388,8 +420,12 @@ def main() -> None:
 
     output_root.mkdir(parents=True, exist_ok=True)
     by_region_dir.mkdir(parents=True, exist_ok=True)
-    by_genre_dir.mkdir(parents=True, exist_ok=True)
     for_mymap_dir.mkdir(parents=True, exist_ok=True)
+
+    legacy_by_genre_dir = output_root / "by_genre"
+    if legacy_by_genre_dir.exists():
+        shutil.rmtree(legacy_by_genre_dir)
+        print(f"Removed legacy grouped genre directory {legacy_by_genre_dir}")
 
     all_path = output_root / "all.csv"
     with all_path.open("w", encoding="utf-8", newline="") as all_file:
@@ -416,24 +452,11 @@ def main() -> None:
             f" ({REGION_LABELS[region_slug]})"
         )
 
-    write_group_outputs(
-        by_genre_dir,
-        grouped_rows,
-        MERGED_GENRE_GROUPS,
-        fieldnames,
-        "genre",
-    )
     for mymap_group_slug, mymap_group in MY_MAP_GROUPS.items():
         write_group_outputs(
             for_mymap_dir / mymap_group_slug,
-            {
-                genre_group_slug: grouped_rows[genre_group_slug]
-                for genre_group_slug in mymap_group["genre_groups"]
-            },
-            {
-                genre_group_slug: MERGED_GENRE_GROUPS[genre_group_slug]
-                for genre_group_slug in mymap_group["genre_groups"]
-            },
+            grouped_rows[mymap_group_slug],
+            mymap_group["outputs"],
             fieldnames,
             f"for_mymap {mymap_group_slug}",
         )
