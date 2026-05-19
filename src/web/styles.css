@@ -469,43 +469,91 @@ body {
 }
 
 .map-legend-dot {
-  width: 10px;
-  height: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  background: #8d8d8d;
+  border: 2px solid #6f6f6f;
+  background: rgba(255, 255, 255, 0.96);
+  color: #4a443d;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.map-legend-dot::after {
+  content: "•";
 }
 
 .map-legend-dot.is-bookable {
-  background: #4d8a58;
+  border-color: #0f8a43;
+  color: #0f8a43;
+}
+
+.map-legend-dot.is-bookable::after {
+  content: "O";
 }
 
 .map-legend-dot.is-static {
-  background: #6f6f6f;
+  border-color: #6f6f6f;
+  color: #6f6f6f;
 }
 
 .map-legend-dot.is-sold-out {
-  background: #b95739;
+  border-color: #d6452f;
+  color: #d6452f;
+}
+
+.map-legend-dot.is-sold-out::after {
+  content: "X";
 }
 
 .map-legend-dot.is-booking-closed {
-  background: #9f8042;
+  border-color: #c67f00;
+  color: #c67f00;
+}
+
+.map-legend-dot.is-booking-closed::after {
+  content: "-";
 }
 
 .map-legend-dot.is-temporarily-closed {
-  background: #6b7f3d;
+  border-color: #5a7d19;
+  color: #5a7d19;
+}
+
+.map-legend-dot.is-temporarily-closed::after {
+  content: "休";
 }
 
 .map-legend-dot.is-not-supported {
-  background: #5c7299;
+  border-color: #2d68c4;
+  color: #2d68c4;
+}
+
+.map-legend-dot.is-not-supported::after {
+  content: "外";
 }
 
 .map-legend-dot.is-unlinked {
-  background: #5c7299;
+  border-color: #6b50c7;
+  color: #6b50c7;
+}
+
+.map-legend-dot.is-unlinked::after {
+  content: "未";
 }
 
 .map-legend-dot.is-skipped {
-  background: #b69a35;
+  border-color: #8c6b17;
+  color: #8c6b17;
+}
+
+.map-legend-dot.is-skipped::after {
+  content: "…";
 }
 
 .popup-card {
@@ -561,46 +609,73 @@ body {
 }
 
 .map-pin span {
-  width: 16px;
-  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.92);
-  box-shadow: 0 2px 8px rgba(36, 29, 21, 0.2);
-  background: #8d8d8d;
+  border: 3px solid #6f6f6f;
+  box-shadow: 0 4px 14px rgba(36, 29, 21, 0.28);
+  background: rgba(255, 255, 255, 0.96);
+  color: #4a443d;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.map-pin span::after {
+  content: attr(data-symbol);
 }
 
 .map-pin.is-bookable span {
-  background: #4d8a58;
+  border-color: #0f8a43;
+  color: #0f8a43;
 }
 
 .map-pin.is-static span {
-  background: #6f6f6f;
+  border-color: #6f6f6f;
+  color: #6f6f6f;
 }
 
 .map-pin.is-sold-out span {
-  background: #b95739;
+  border-color: #d6452f;
+  color: #d6452f;
 }
 
 .map-pin.is-booking-closed span {
-  background: #9f8042;
+  border-color: #c67f00;
+  color: #c67f00;
 }
 
 .map-pin.is-temporarily-closed span {
-  background: #6b7f3d;
+  border-color: #5a7d19;
+  color: #5a7d19;
 }
 
 .map-pin.is-not-supported span,
 .map-pin.is-unlinked span {
-  background: #5c7299;
+  color: #2d68c4;
+}
+
+.map-pin.is-not-supported span {
+  border-color: #2d68c4;
+}
+
+.map-pin.is-unlinked span {
+  border-color: #6b50c7;
+  color: #6b50c7;
 }
 
 .map-pin.is-error span,
 .map-pin.is-unknown span {
-  background: #7d5b97;
+  border-color: #7d5b97;
+  color: #7d5b97;
 }
 
 .map-pin.is-skipped span {
-  background: #b69a35;
+  border-color: #8c6b17;
+  color: #8c6b17;
 }
 
 @media (max-width: 960px) {
@@ -696,6 +771,12 @@ body {
 
   .map-legend-item {
     font-size: 10px;
+  }
+
+  .map-legend-dot {
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
   }
 
   .map-hud-legend-toggle {
