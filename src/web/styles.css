@@ -374,6 +374,7 @@ body {
 
 .map-hud-legend {
   padding: 10px 14px;
+  pointer-events: auto;
 }
 
 .map-hud-legend[open] {
@@ -383,7 +384,9 @@ body {
 .map-hud-legend-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
   cursor: pointer;
   list-style: none;
   font-size: 11px;
@@ -405,6 +408,19 @@ body {
 
 .map-hud-legend[open] .map-hud-legend-toggle::after {
   content: "-";
+}
+
+.map-hud-legend-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 6px;
+}
+
+.map-hud-legend-preview .map-legend-dot {
+  width: 8px;
+  height: 8px;
 }
 
 .map-hud-label {
@@ -668,6 +684,11 @@ body {
   .map-hud-legend-toggle {
     font-size: 10px;
     letter-spacing: 0.05em;
+  }
+
+  .map-hud-legend-preview {
+    gap: 3px;
+    margin-right: 4px;
   }
 
   .filters,
