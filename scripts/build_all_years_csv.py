@@ -131,6 +131,36 @@ MERGED_GENRE_GROUPS = {
         },
     },
 }
+MY_MAP_GROUPS = {
+    "lunch": {
+        "label": "Lunch",
+        "genre_groups": [
+            "ramen",
+            "udon_soba",
+            "asian_chinese",
+            "bakery_fastfood",
+            "curry_izakaya_bar",
+        ],
+    },
+    "dinner": {
+        "label": "Dinner",
+        "genre_groups": [
+            "sushi_seafood",
+            "meat_grill",
+            "japanese_kitchen",
+            "western_european",
+            "asian_chinese",
+            "curry_izakaya_bar",
+        ],
+    },
+    "snack": {
+        "label": "Snack & Cafe",
+        "genre_groups": [
+            "sweets_cafe",
+            "bakery_fastfood",
+        ],
+    },
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -215,12 +245,63 @@ def collect_group_rows(
     return grouped_rows, unmatched_genre_slugs
 
 
+def write_group_outputs(
+    output_dir: Path,
+    group_rows: dict[str, list[dict[str, str]]],
+    group_definitions: dict[str, dict[str, object]],
+    fieldnames: list[str],
+    output_label: str,
+) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    existing_paths = {path.name for path in output_dir.glob("*.csv")}
+    expected_paths = {f"{group_slug}.csv" for group_slug in group_definitions}
+    for stale_name in sorted(existing_paths - expected_paths):
+        stale_path = output_dir / stale_name
+        stale_path.unlink()
+        print(f"Removed stale {output_label} output {stale_path}")
+
+    for group_slug, group in group_definitions.items():
+        target_path = output_dir / f"{group_slug}.csv"
+        rows = group_rows[group_slug]
+        if not rows:
+            if target_path.exists():
+                target_path.unlink()
+            print(
+                f"Skipped empty {output_label} output {target_path}"
+                f" ({group['label']})"
+            )
+            continue
+
+        with target_path.open("w", encoding="utf-8", newline="") as target_file:
+            writer = csv.DictWriter(target_file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        print(
+            f"Wrote {len(rows)} rows to {target_path}"
+            f" ({group['label']})"
+        )
+
+
+def collect_mymap_rows(
+    grouped_rows: dict[str, list[dict[str, str]]],
+) -> dict[str, list[dict[str, str]]]:
+    mymap_rows: dict[str, list[dict[str, str]]] = {}
+    for mymap_group_slug, mymap_group in MY_MAP_GROUPS.items():
+        rows: list[dict[str, str]] = []
+        for genre_group_slug in mymap_group["genre_groups"]:
+            rows.extend(grouped_rows[genre_group_slug])
+        mymap_rows[mymap_group_slug] = rows
+    return mymap_rows
+
+
 def main() -> None:
     args = parse_args()
     input_root = Path(args.input_dir)
     output_root = Path(args.output_dir)
     by_region_dir = output_root / "by_region"
     by_genre_dir = output_root / "by_genre"
+    for_mymap_dir = output_root / "for_mymap"
 
     source_paths = sorted(
         path
@@ -308,6 +389,7 @@ def main() -> None:
     output_root.mkdir(parents=True, exist_ok=True)
     by_region_dir.mkdir(parents=True, exist_ok=True)
     by_genre_dir.mkdir(parents=True, exist_ok=True)
+    for_mymap_dir.mkdir(parents=True, exist_ok=True)
 
     all_path = output_root / "all.csv"
     with all_path.open("w", encoding="utf-8", newline="") as all_file:
@@ -334,34 +416,26 @@ def main() -> None:
             f" ({REGION_LABELS[region_slug]})"
         )
 
-    existing_genre_paths = {path.name for path in by_genre_dir.glob("*.csv")}
-    expected_genre_paths = {
-        f"{group_slug}.csv" for group_slug in MERGED_GENRE_GROUPS
-    }
-    for stale_name in sorted(existing_genre_paths - expected_genre_paths):
-        stale_path = by_genre_dir / stale_name
-        stale_path.unlink()
-        print(f"Removed stale genre output {stale_path}")
-
-    for group_slug, group in MERGED_GENRE_GROUPS.items():
-        target_path = by_genre_dir / f"{group_slug}.csv"
-        rows = grouped_rows[group_slug]
-        if not rows:
-            if target_path.exists():
-                target_path.unlink()
-            print(
-                f"Skipped empty genre output {target_path}"
-                f" ({group['label']})"
-            )
-            continue
-
-        with target_path.open("w", encoding="utf-8", newline="") as target_file:
-            writer = csv.DictWriter(target_file, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
-        print(
-            f"Wrote {len(rows)} rows to {target_path}"
-            f" ({group['label']})"
+    write_group_outputs(
+        by_genre_dir,
+        grouped_rows,
+        MERGED_GENRE_GROUPS,
+        fieldnames,
+        "genre",
+    )
+    for mymap_group_slug, mymap_group in MY_MAP_GROUPS.items():
+        write_group_outputs(
+            for_mymap_dir / mymap_group_slug,
+            {
+                genre_group_slug: grouped_rows[genre_group_slug]
+                for genre_group_slug in mymap_group["genre_groups"]
+            },
+            {
+                genre_group_slug: MERGED_GENRE_GROUPS[genre_group_slug]
+                for genre_group_slug in mymap_group["genre_groups"]
+            },
+            fieldnames,
+            f"for_mymap {mymap_group_slug}",
         )
 
     print(f"Wrote {len(all_rows)} rows to {all_path}")

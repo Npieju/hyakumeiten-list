@@ -112,6 +112,8 @@ python3 scripts/build_all_years_csv.py
 
 Google My Maps の 10 layer 制限に合わせて、`data/all_years/by_genre/*.csv` には近い genre をまとめた 10 分類も出力します。地域違いの slug は同じファイルに統合されます。
 
+さらに My Maps 用の使い分けとして、同じ grouped CSV を `data/all_years/for_mymap/` 配下に `lunch` / `dinner` / `snack` の directory へ分けて出力します。各 directory の中身は 10 ファイル未満に抑えます。
+
 出力先:
 
 - `data/all_years/all.csv`
@@ -131,6 +133,9 @@ Google My Maps の 10 layer 制限に合わせて、`data/all_years/by_genre/*.c
 - `data/all_years/by_region/kansai.csv`
 - `data/all_years/by_region/chugoku_shikoku_kyushu.csv`
 - `data/all_years/by_region/unknown.csv`
+- `data/all_years/for_mymap/lunch/*.csv`
+- `data/all_years/for_mymap/dinner/*.csv`
+- `data/all_years/for_mymap/snack/*.csv`
 
 ## 予約検索向けの検索マスタを作る
 
