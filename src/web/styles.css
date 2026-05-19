@@ -29,18 +29,18 @@ body {
 .sidebar {
   grid-area: sidebar;
   position: absolute;
-  top: 18px;
-  left: 18px;
-  bottom: 18px;
+  top: 14px;
+  left: 14px;
+  bottom: 14px;
   z-index: 500;
-  width: min(380px, calc(100vw - 36px));
+  width: min(332px, calc(100vw - 28px));
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px;
+  gap: 12px;
+  padding: 14px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 18px;
   box-shadow: 0 18px 60px rgba(36, 29, 21, 0.18);
   backdrop-filter: blur(12px);
   overflow: auto;
@@ -64,41 +64,56 @@ body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-height: 0;
 }
 
 .panel-header h1 {
   margin: 0 0 8px;
-  font-size: 28px;
+  font-size: 24px;
 }
 
 .panel-header p {
   margin: 0;
+  font-size: 13px;
   color: rgba(36, 29, 21, 0.75);
 }
 
 .filters {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .filters label,
 .checkbox-row {
   display: grid;
-  gap: 6px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .checkbox-accent-row {
+  grid-column: 1 / -1;
   padding: 8px 10px;
   border: 1px solid rgba(156, 79, 47, 0.18);
   border-radius: 12px;
   background: rgba(156, 79, 47, 0.08);
 }
 
+.checkbox-row {
+  grid-column: 1 / -1;
+}
+
+.button-row,
+.reservation-fields,
+.status-panel,
+.results-panel {
+  grid-column: 1 / -1;
+}
+
 .filters span,
 .checkbox-row span {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -109,8 +124,8 @@ body {
 .filters button {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: 10px;
+  padding: 10px 12px;
   font: inherit;
   background: #fffdf8;
 }
@@ -125,12 +140,17 @@ body {
 
 .reservation-fields {
   display: grid;
-  gap: 12px;
-  padding: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.55);
   transition: opacity 120ms ease;
+}
+
+.reservation-fields label {
+  min-width: 0;
 }
 
 .reservation-fields.is-disabled {
@@ -138,16 +158,16 @@ body {
 }
 
 .status-panel {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.6);
 }
 
 .warning {
-  margin-top: 8px;
+  margin-top: 6px;
   color: var(--accent);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .results-panel {
@@ -161,11 +181,11 @@ body {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .results-meta strong {
-  font-size: 28px;
+  font-size: 22px;
 }
 
 .result-list {
@@ -173,9 +193,9 @@ body {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   overflow: auto;
-  padding-bottom: 12px;
+  padding-bottom: 8px;
 }
 
 .result-item {
@@ -193,25 +213,25 @@ body {
   width: 100%;
   border: none;
   background: transparent;
-  padding: 14px;
+  padding: 12px;
   text-align: left;
   display: grid;
-  gap: 6px;
+  gap: 4px;
   cursor: pointer;
   color: inherit;
   font: inherit;
 }
 
 .result-button strong {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .result-status-row {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: fit-content;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: rgba(36, 29, 21, 0.7);
 }
@@ -267,17 +287,17 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 8px;
+  padding: 3px 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.03em;
   white-space: nowrap;
 }
 
 .status-chip.small {
-  font-size: 10px;
-  padding: 3px 7px;
+  font-size: 9px;
+  padding: 2px 6px;
 }
 
 .is-bookable {
@@ -324,22 +344,57 @@ body {
 
 .map-hud {
   position: absolute;
-  right: 18px;
-  top: 18px;
+  right: 14px;
+  top: 14px;
   z-index: 450;
   display: grid;
-  gap: 12px;
-  width: min(320px, calc(100vw - 54px));
+  gap: 6px;
+  width: min(220px, calc(100vw - 42px));
   pointer-events: none;
 }
 
 .map-hud-card {
   border: 1px solid rgba(255, 255, 255, 0.65);
-  border-radius: 18px;
+  border-radius: 14px;
   background: rgba(36, 29, 21, 0.72);
   color: rgba(255, 248, 238, 0.96);
   box-shadow: 0 16px 36px rgba(36, 29, 21, 0.2);
-  padding: 14px 16px;
+  padding: 10px 12px;
+}
+
+.map-hud-legend {
+  padding: 10px 14px;
+}
+
+.map-hud-legend[open] {
+  padding-bottom: 14px;
+}
+
+.map-hud-legend-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 248, 238, 0.84);
+}
+
+.map-hud-legend-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.map-hud-legend-toggle::after {
+  content: "+";
+  font-size: 14px;
+  line-height: 1;
+}
+
+.map-hud-legend[open] .map-hud-legend-toggle::after {
+  content: "-";
 }
 
 .map-hud-label {
@@ -351,31 +406,31 @@ body {
 }
 
 .map-hud-status {
-  margin-top: 6px;
-  font-size: 22px;
+  margin-top: 4px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.1;
 }
 
 .map-hud-filters {
-  margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.5;
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 1.35;
   color: rgba(255, 248, 238, 0.84);
 }
 
 .map-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 12px;
-  margin-top: 10px;
+  gap: 6px 10px;
+  margin-top: 8px;
 }
 
 .map-legend-item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .map-legend-dot {
@@ -499,47 +554,95 @@ body {
 
 @media (max-width: 960px) {
   .app-shell {
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "map"
-      "sidebar";
-    grid-template-rows: 56vh auto;
+    display: block;
   }
 
   .sidebar {
-    position: static;
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    bottom: auto;
     width: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--line);
+    border: none;
+    background: transparent;
     border-radius: 0;
     box-shadow: none;
     overflow: visible;
+    padding: 0;
+    z-index: 500;
   }
 
   .sidebar-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    padding: 9px 12px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 10px 24px rgba(36, 29, 21, 0.14);
   }
 
   .sidebar-content.is-collapsed {
     display: none;
   }
 
+  .sidebar-content {
+    width: min(320px, calc(100vw - 24px));
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--panel);
+    box-shadow: 0 18px 48px rgba(36, 29, 21, 0.18);
+    backdrop-filter: blur(12px);
+    max-height: calc(100vh - 92px);
+    overflow: auto;
+  }
+
   #map {
-    height: 56vh;
+    height: 100vh;
   }
 
   .map-hud {
     top: 12px;
     right: 12px;
-    left: 12px;
-    width: auto;
-    gap: 8px;
+    width: min(172px, calc(100vw - 24px));
+    gap: 4px;
+  }
+
+  .map-hud-card {
+    padding: 8px 10px;
+    border-radius: 12px;
   }
 
   .map-hud-status {
-    font-size: 18px;
+    font-size: 14px;
+  }
+
+  .map-hud-filters {
+    display: none;
+  }
+
+  .map-hud-legend {
+    padding: 7px 10px;
+  }
+
+  .map-hud-legend:not([open]) {
+    padding-bottom: 8px;
+  }
+
+  .map-legend {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .map-legend-item {
+    font-size: 10px;
+  }
+
+  .filters,
+  .reservation-fields {
+    grid-template-columns: 1fr;
   }
 }
