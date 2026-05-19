@@ -51,12 +51,13 @@ body {
   width: fit-content;
   border: 1px solid rgba(156, 79, 47, 0.24);
   border-radius: 999px;
-  padding: 10px 14px;
+  padding: 9px 12px;
   background: rgba(255, 255, 255, 0.88);
   color: var(--ink);
   font: inherit;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -559,7 +560,7 @@ body {
 
   .sidebar {
     position: absolute;
-    top: 12px;
+    top: 74px;
     left: 12px;
     bottom: auto;
     width: auto;
@@ -576,7 +577,8 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 9px 12px;
+    min-width: 0;
+    padding: 7px 10px;
     background: rgba(255, 255, 255, 0.96);
     box-shadow: 0 10px 24px rgba(36, 29, 21, 0.14);
   }
@@ -586,11 +588,11 @@ body {
   }
 
   .sidebar-content {
-    width: min(320px, calc(100vw - 24px));
-    margin-top: 10px;
-    padding: 12px;
+    width: min(304px, calc(100vw - 24px));
+    margin-top: 8px;
+    padding: 10px;
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: 14px;
     background: var(--panel);
     box-shadow: 0 18px 48px rgba(36, 29, 21, 0.18);
     backdrop-filter: blur(12px);
@@ -605,7 +607,7 @@ body {
   .map-hud {
     top: 12px;
     right: 12px;
-    width: min(172px, calc(100vw - 24px));
+    width: min(148px, calc(100vw - 24px));
     gap: 4px;
   }
 
@@ -614,8 +616,13 @@ body {
     border-radius: 12px;
   }
 
+  .map-hud-label {
+    display: none;
+  }
+
   .map-hud-status {
     font-size: 14px;
+    margin-top: 0;
   }
 
   .map-hud-filters {
@@ -623,7 +630,7 @@ body {
   }
 
   .map-hud-legend {
-    padding: 7px 10px;
+    padding: 6px 9px;
   }
 
   .map-hud-legend:not([open]) {
@@ -639,6 +646,11 @@ body {
 
   .map-legend-item {
     font-size: 10px;
+  }
+
+  .map-hud-legend-toggle {
+    font-size: 10px;
+    letter-spacing: 0.05em;
   }
 
   .filters,

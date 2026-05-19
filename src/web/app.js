@@ -411,7 +411,7 @@ function syncReservationFields() {
 function syncSidebarState() {
   const collapsed = window.innerWidth <= 960 && sidebarContent.classList.contains("is-collapsed");
   sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
-  sidebarToggle.textContent = collapsed ? "Show Filters" : "Hide Filters";
+  sidebarToggle.textContent = collapsed ? "Filters" : "Close";
 }
 
 function setSidebarCollapsed(collapsed) {
