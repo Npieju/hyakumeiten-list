@@ -229,6 +229,11 @@ body {
   color: #5b3c71;
 }
 
+.is-skipped {
+  background: #efe3ae;
+  color: #6b5712;
+}
+
 .map-area {
   position: relative;
 }
@@ -250,7 +255,7 @@ body {
 
 .provider-row {
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns: auto auto 1fr auto;
   gap: 8px;
   align-items: center;
   font-size: 12px;
@@ -262,6 +267,12 @@ body {
 
 .provider-slots {
   color: rgba(36, 29, 21, 0.72);
+}
+
+.provider-source {
+  color: rgba(36, 29, 21, 0.56);
+  font-size: 11px;
+  text-transform: lowercase;
 }
 
 .popup-genres {
@@ -313,6 +324,10 @@ body {
 .map-pin.is-error span,
 .map-pin.is-unknown span {
   background: #7d5b97;
+}
+
+.map-pin.is-skipped span {
+  background: #b69a35;
 }
 
 @media (max-width: 960px) {

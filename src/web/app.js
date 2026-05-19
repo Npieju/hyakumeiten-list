@@ -46,6 +46,7 @@ const STATUS_CLASS_NAMES = {
   provider_unlinked: "is-unlinked",
   provider_error: "is-error",
   unknown: "is-unknown",
+  skipped: "is-skipped",
 };
 
 function reservationEnabled() {
@@ -62,6 +63,30 @@ function statusClassName(status) {
 
 function summaryStatus(shop) {
   return shop.reservation_summary?.status || null;
+}
+
+function hasSkippedProvider(shop) {
+  return Array.isArray(shop.providers) && shop.providers.some((provider) => provider.source === "skipped");
+}
+
+function displayStatus(shop) {
+  const status = summaryStatus(shop);
+  if (hasSkippedProvider(shop) && status === "unknown") {
+    return "skipped";
+  }
+  return status;
+}
+
+function statusLabelForShop(shop) {
+  const status = displayStatus(shop);
+  if (status === "skipped") {
+    return "未評価";
+  }
+  return statusLabel(status);
+}
+
+function statusClassForShop(shop) {
+  return statusClassName(displayStatus(shop));
 }
 
 function buildParams() {
@@ -142,8 +167,7 @@ function reservationSummaryMarkup(shop) {
   if (!shop.reservation_summary) {
     return "";
   }
-  const status = shop.reservation_summary.status;
-  return `<span class="status-chip ${statusClassName(status)}">${statusLabel(status)}</span>`;
+  return `<span class="status-chip ${statusClassForShop(shop)}">${statusLabelForShop(shop)}</span>`;
 }
 
 function providerRowsMarkup(shop) {
@@ -156,11 +180,25 @@ function providerRowsMarkup(shop) {
       const slots = provider.available_slots.length > 0
         ? provider.available_slots.join(", ")
         : "-";
+      const sourceLabel = provider.source === "skipped"
+        ? "未評価"
+        : provider.source === "cache"
+          ? "cache"
+          : provider.source === "live"
+            ? "live"
+            : "";
+      const providerStatusLabel = provider.source === "skipped"
+        ? "未評価"
+        : statusLabel(provider.status);
+      const providerStatusClass = provider.source === "skipped"
+        ? statusClassName("skipped")
+        : statusClassName(provider.status);
       return `
         <div class="provider-row">
           <span class="provider-name">${provider.provider || "unlinked"}</span>
-          <span class="status-chip small ${statusClassName(provider.status)}">${statusLabel(provider.status)}</span>
+          <span class="status-chip small ${providerStatusClass}">${providerStatusLabel}</span>
           <span class="provider-slots">${slots}</span>
+          <span class="provider-source">${sourceLabel}</span>
         </div>
       `;
     })
@@ -227,7 +265,7 @@ function renderMarkers(items) {
   markerByShopId = new Map();
 
   for (const shop of items) {
-    const status = summaryStatus(shop);
+    const status = displayStatus(shop);
     const marker = L.marker([shop.latitude, shop.longitude], {
       icon: L.divIcon({
         className: `map-pin ${statusClassName(status)}`,
@@ -289,7 +327,7 @@ async function refresh() {
       const cachePercent = Math.round((payload.cache_hit_ratio || 0) * 100);
       statusText.textContent = `${payload.items.length} / ${payload.total} shops, cache ${cachePercent}%`;
       warningText.textContent = payload.warning === "live_check_limit_exceeded"
-        ? "live check 上限に達したため、一部は未評価です。条件を絞ってください。"
+        ? "live check 上限に達したため、表示中に未評価の店舗が含まれます。条件を絞ってください。"
         : "";
     } else {
       resultCount.textContent = String(payload.returned);
