@@ -120,6 +120,24 @@
 
     <main class="map-area">
       <div id="map"></div>
+      <section class="map-hud" aria-label="Map summary">
+        <div class="map-hud-card map-hud-card-primary">
+          <div class="map-hud-label">Map View</div>
+          <div id="map-hud-status" class="map-hud-status">地図を読み込み中...</div>
+          <div id="map-hud-filters" class="map-hud-filters">Year 2025</div>
+        </div>
+        <div class="map-hud-card map-hud-card-legend">
+          <div class="map-hud-label">Legend</div>
+          <div class="map-legend">
+            <span class="map-legend-item"><i class="map-legend-dot is-bookable"></i>予約可能</span>
+            <span class="map-legend-item"><i class="map-legend-dot is-sold-out"></i>空席なし</span>
+            <span class="map-legend-item"><i class="map-legend-dot is-booking-closed"></i>受付終了</span>
+            <span class="map-legend-item"><i class="map-legend-dot is-not-supported"></i>予約対象外</span>
+            <span class="map-legend-item"><i class="map-legend-dot is-unlinked"></i>未紐付け</span>
+            <span class="map-legend-item"><i class="map-legend-dot is-skipped"></i>未評価</span>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 

@@ -277,21 +277,92 @@ body {
   height: 100vh;
 }
 
-.map-area::after {
-  content: "Drag the map to update results";
+.map-hud {
   position: absolute;
   right: 18px;
   top: 18px;
   z-index: 450;
-  padding: 10px 14px;
+  display: grid;
+  gap: 12px;
+  width: min(320px, calc(100vw - 54px));
+  pointer-events: none;
+}
+
+.map-hud-card {
   border: 1px solid rgba(255, 255, 255, 0.65);
-  border-radius: 999px;
+  border-radius: 18px;
   background: rgba(36, 29, 21, 0.72);
   color: rgba(255, 248, 238, 0.96);
-  font-size: 12px;
-  letter-spacing: 0.04em;
+  box-shadow: 0 16px 36px rgba(36, 29, 21, 0.2);
+  padding: 14px 16px;
+}
+
+.map-hud-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  pointer-events: none;
+  color: rgba(255, 248, 238, 0.72);
+}
+
+.map-hud-status {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.map-hud-filters {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 248, 238, 0.84);
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+.map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.map-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: #8d8d8d;
+}
+
+.map-legend-dot.is-bookable {
+  background: #4d8a58;
+}
+
+.map-legend-dot.is-sold-out {
+  background: #b95739;
+}
+
+.map-legend-dot.is-booking-closed {
+  background: #9f8042;
+}
+
+.map-legend-dot.is-not-supported {
+  background: #5c7299;
+}
+
+.map-legend-dot.is-unlinked {
+  background: #5c7299;
+}
+
+.map-legend-dot.is-skipped {
+  background: #b69a35;
 }
 
 .popup-card {
@@ -415,9 +486,15 @@ body {
     height: 56vh;
   }
 
-   .map-area::after {
+  .map-hud {
     top: 12px;
     right: 12px;
-    font-size: 11px;
+    left: 12px;
+    width: auto;
+    gap: 8px;
+  }
+
+  .map-hud-status {
+    font-size: 18px;
   }
 }

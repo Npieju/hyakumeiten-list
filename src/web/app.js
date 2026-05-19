@@ -20,6 +20,8 @@ const warningText = document.getElementById("warning-text");
 const form = document.getElementById("search-form");
 const sidebarToggle = document.getElementById("sidebar-toggle");
 const sidebarContent = document.getElementById("sidebar-content");
+const mapHudStatus = document.getElementById("map-hud-status");
+const mapHudFilters = document.getElementById("map-hud-filters");
 const reservationEnabledInput = document.getElementById("reservation-enabled-input");
 const reservationFields = document.getElementById("reservation-fields");
 
@@ -89,6 +91,41 @@ function statusLabelForShop(shop) {
 
 function statusClassForShop(shop) {
   return statusClassName(displayStatus(shop));
+}
+
+function currentFilterSummary() {
+  const year = document.getElementById("year-input").value.trim();
+  const genreSlug = document.getElementById("genre-input").value.trim();
+  const nameQuery = document.getElementById("name-input").value.trim();
+  const region = document.getElementById("region-input").value;
+  const parts = [];
+
+  if (year) {
+    parts.push(`Year ${year}`);
+  }
+  if (genreSlug) {
+    parts.push(`Genre ${genreSlug}`);
+  }
+  if (nameQuery) {
+    parts.push(`Name ${nameQuery}`);
+  }
+  if (region) {
+    parts.push(`Region ${region}`);
+  }
+  if (reservationEnabled()) {
+    const reservationStatus = document.getElementById("reservation-status-input").value;
+    parts.push("Reservation On");
+    if (reservationStatus) {
+      parts.push(`Status ${statusLabel(reservationStatus)}`);
+    }
+  }
+
+  return parts.join(" / ") || "Viewport search";
+}
+
+function updateMapHud(primary, secondary = currentFilterSummary()) {
+  mapHudStatus.textContent = primary;
+  mapHudFilters.textContent = secondary;
 }
 
 function buildParams() {
@@ -289,6 +326,7 @@ function renderMarkers(items) {
 async function fetchShops() {
   statusText.textContent = "検索中...";
   warningText.textContent = "";
+  updateMapHud("検索中...", currentFilterSummary());
 
   if (reservationEnabled()) {
     const response = await fetch("/v1/shops/availability-search", {
@@ -328,18 +366,21 @@ async function refresh() {
       resultCount.textContent = String(payload.items.length);
       const cachePercent = Math.round((payload.cache_hit_ratio || 0) * 100);
       statusText.textContent = `${payload.items.length} / ${payload.total} shops, cache ${cachePercent}%`;
+      updateMapHud(`${payload.items.length} / ${payload.total} shops`, `${currentFilterSummary()} / Cache ${cachePercent}%`);
       warningText.textContent = payload.warning === "live_check_limit_exceeded"
         ? "live check 上限に達したため、表示中に未評価の店舗が含まれます。条件を絞ってください。"
         : "";
     } else {
       resultCount.textContent = String(payload.returned);
       statusText.textContent = `${payload.returned} / ${payload.total} shops`;
+      updateMapHud(`${payload.returned} / ${payload.total} shops`, currentFilterSummary());
       warningText.textContent = payload.truncated && payload.warning
         ? "表示範囲内の件数が多いため、一部のみ表示しています。"
         : "";
     }
   } catch (error) {
     statusText.textContent = "検索に失敗しました";
+    updateMapHud("検索に失敗しました", currentFilterSummary());
     warningText.textContent = error instanceof Error ? error.message : String(error);
     resultCount.textContent = "0";
     lastItems = [];
@@ -405,4 +446,5 @@ window.addEventListener("resize", syncSidebarForViewport);
 
 syncReservationFields();
 syncSidebarForViewport();
+updateMapHud("地図を読み込み中...", currentFilterSummary());
 refresh();
