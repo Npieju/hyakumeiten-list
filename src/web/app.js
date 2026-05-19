@@ -18,6 +18,8 @@ const resultCount = document.getElementById("result-count");
 const statusText = document.getElementById("status-text");
 const warningText = document.getElementById("warning-text");
 const form = document.getElementById("search-form");
+const sidebarToggle = document.getElementById("sidebar-toggle");
+const sidebarContent = document.getElementById("sidebar-content");
 const reservationEnabledInput = document.getElementById("reservation-enabled-input");
 const reservationFields = document.getElementById("reservation-fields");
 
@@ -350,6 +352,33 @@ function syncReservationFields() {
   reservationFields.classList.toggle("is-disabled", !reservationEnabled());
 }
 
+function syncSidebarState() {
+  const collapsed = window.innerWidth <= 960 && sidebarContent.classList.contains("is-collapsed");
+  sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
+  sidebarToggle.textContent = collapsed ? "Show Filters" : "Hide Filters";
+}
+
+function setSidebarCollapsed(collapsed) {
+  sidebarContent.classList.toggle("is-collapsed", collapsed);
+  syncSidebarState();
+}
+
+function syncSidebarForViewport() {
+  if (window.innerWidth <= 960) {
+    if (!sidebarContent.dataset.mobileInitialized) {
+      setSidebarCollapsed(true);
+      sidebarContent.dataset.mobileInitialized = "true";
+      return;
+    }
+    syncSidebarState();
+    return;
+  }
+
+  sidebarContent.classList.remove("is-collapsed");
+  delete sidebarContent.dataset.mobileInitialized;
+  syncSidebarState();
+}
+
 function scheduleRefresh() {
   window.clearTimeout(fetchTimer);
   fetchTimer = window.setTimeout(() => {
@@ -367,7 +396,13 @@ reservationEnabledInput.addEventListener("change", () => {
   scheduleRefresh();
 });
 
+sidebarToggle.addEventListener("click", () => {
+  setSidebarCollapsed(!sidebarContent.classList.contains("is-collapsed"));
+});
+
 map.on("moveend", scheduleRefresh);
+window.addEventListener("resize", syncSidebarForViewport);
 
 syncReservationFields();
+syncSidebarForViewport();
 refresh();

@@ -11,6 +11,8 @@
 <body>
   <div class="app-shell">
     <aside class="sidebar">
+      <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-expanded="true" aria-controls="sidebar-content">Filters</button>
+      <div id="sidebar-content" class="sidebar-content">
       <div class="panel-header">
         <h1>Hyakumeiten Map</h1>
         <p>百名店を地図と一覧で横断検索</p>
@@ -113,6 +115,7 @@
         </div>
         <ul id="result-list" class="result-list"></ul>
       </section>
+      </div>
     </aside>
 
     <main class="map-area">

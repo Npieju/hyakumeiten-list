@@ -46,6 +46,28 @@ body {
   overflow: auto;
 }
 
+.sidebar-toggle {
+  display: none;
+  width: fit-content;
+  border: 1px solid rgba(156, 79, 47, 0.24);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sidebar-content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
 .panel-header h1 {
   margin: 0 0 8px;
   font-size: 28px;
@@ -377,6 +399,16 @@ body {
     border-radius: 0;
     box-shadow: none;
     overflow: visible;
+  }
+
+  .sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebar-content.is-collapsed {
+    display: none;
   }
 
   #map {
