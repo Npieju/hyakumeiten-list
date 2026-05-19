@@ -87,6 +87,14 @@ MY_MAP_GROUPS = {
                     "yoshoku_west",
                 },
             },
+            "bread_light_meal": {
+                "label": "Bread Light Meal",
+                "genre_slugs": {
+                    "bread_east",
+                    "bread_tokyo",
+                    "bread_west",
+                },
+            },
             "okonomiyaki": {
                 "label": "Okonomiyaki",
                 "genre_slugs": {"okonomiyaki"},
@@ -131,8 +139,8 @@ MY_MAP_GROUPS = {
                     "yakiniku_west",
                 },
             },
-            "steak": {
-                "label": "Steak",
+            "steak_meat": {
+                "label": "Steak & Meat",
                 "genre_slugs": {
                     "steak_east",
                     "steak_west",
@@ -198,8 +206,8 @@ MY_MAP_GROUPS = {
                     "kissaten",
                 },
             },
-            "bread": {
-                "label": "Bread",
+            "bread_bakery": {
+                "label": "Bread & Bakery",
                 "genre_slugs": {
                     "bread_east",
                     "bread_tokyo",

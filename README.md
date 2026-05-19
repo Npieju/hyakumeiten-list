@@ -110,7 +110,7 @@ python3 scripts/build_all_years_csv.py
 この集計では、同じ `Website` の店舗は 1 行にまとめます。
 `Year`、`Genre`、`Genre Slug`、`Release Date` は ` | ` 区切りの複数値になります。
 
-Google My Maps の 10 layer 制限に合わせて、`data/all_years/for_mymap/` 配下に `lunch` / `dinner` / `snack` の directory を出力します。各 directory は 10 未満の CSV に抑えつつ、余計な圧縮は避けて、同じジャンルの地域違いだけを主にまとめます。
+Google My Maps の 10 layer 制限に合わせて、`data/all_years/for_mymap/` 配下に `lunch` / `dinner` / `snack` の directory を出力します。各 directory は 10 以下の CSV に抑えつつ、余計な圧縮は避けて、同じジャンルの地域違いだけを主にまとめます。
 
 出力先:
 
