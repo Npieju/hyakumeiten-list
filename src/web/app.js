@@ -42,6 +42,7 @@ const STATUS_LABELS = {
 };
 
 const STATUS_CLASS_NAMES = {
+  static: "is-static",
   bookable: "is-bookable",
   sold_out: "is-sold-out",
   booking_closed: "is-booking-closed",
@@ -90,13 +91,13 @@ function statusLabelForShop(shop) {
 }
 
 function statusClassForShop(shop) {
-  return statusClassName(displayStatus(shop));
+  return statusClassName(displayStatus(shop) || "static");
 }
 
 function statusMetaMarkup(shop) {
   const status = displayStatus(shop);
   if (!status) {
-    return `<div class="result-status-row"><span class="result-status-dot"></span><span class="result-status-text">静的検索結果</span></div>`;
+    return `<div class="result-status-row is-static"><span class="result-status-dot"></span><span class="result-status-text">静的検索結果</span></div>`;
   }
 
   return `
@@ -319,7 +320,7 @@ function renderMarkers(items) {
   markerByShopId = new Map();
 
   for (const shop of items) {
-    const status = displayStatus(shop);
+    const status = displayStatus(shop) || "static";
     const marker = L.marker([shop.latitude, shop.longitude], {
       icon: L.divIcon({
         className: `map-pin ${statusClassName(status)}`,

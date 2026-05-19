@@ -250,6 +250,10 @@ body {
   background: #4d8a58;
 }
 
+.result-status-row.is-static .result-status-dot {
+  background: #6f6f6f;
+}
+
 .result-status-row.is-sold-out .result-status-dot {
   background: #b95739;
 }
@@ -308,6 +312,11 @@ body {
 .is-bookable {
   background: #d7ead2;
   color: #205232;
+}
+
+.is-static {
+  background: #e5e1da;
+  color: #4a443d;
 }
 
 .is-sold-out {
@@ -471,6 +480,10 @@ body {
   background: #4d8a58;
 }
 
+.map-legend-dot.is-static {
+  background: #6f6f6f;
+}
+
 .map-legend-dot.is-sold-out {
   background: #b95739;
 }
@@ -558,6 +571,10 @@ body {
 
 .map-pin.is-bookable span {
   background: #4d8a58;
+}
+
+.map-pin.is-static span {
+  background: #6f6f6f;
 }
 
 .map-pin.is-sold-out span {
