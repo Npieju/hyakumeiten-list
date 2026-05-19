@@ -24,10 +24,12 @@ body {
 .app-shell {
   display: grid;
   grid-template-columns: 360px 1fr;
+  grid-template-areas: "sidebar map";
   min-height: 100vh;
 }
 
 .sidebar {
+  grid-area: sidebar;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -235,6 +237,7 @@ body {
 }
 
 .map-area {
+  grid-area: map;
   position: relative;
 }
 
@@ -333,7 +336,10 @@ body {
 @media (max-width: 960px) {
   .app-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 60vh;
+    grid-template-areas:
+      "map"
+      "sidebar";
+    grid-template-rows: 56vh auto;
   }
 
   .sidebar {
@@ -342,6 +348,6 @@ body {
   }
 
   #map {
-    min-height: 60vh;
+    min-height: 56vh;
   }
 }
