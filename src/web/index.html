@@ -49,6 +49,53 @@
           <span>複数年掲載のみ</span>
         </label>
 
+        <label class="checkbox-row checkbox-accent-row">
+          <input id="reservation-enabled-input" name="reservation_enabled" type="checkbox">
+          <span>予約状態を取得する</span>
+        </label>
+
+        <div id="reservation-fields" class="reservation-fields is-disabled">
+          <label>
+            <span>Date</span>
+            <input id="reservation-date-input" name="reservation_date" type="date" value="2026-05-25">
+          </label>
+
+          <label>
+            <span>Party Size</span>
+            <input id="party-size-input" name="party_size" type="number" min="1" max="12" value="2">
+          </label>
+
+          <label>
+            <span>Time Window</span>
+            <select id="time-window-input" name="time_window">
+              <option value="dinner">Dinner</option>
+              <option value="lunch">Lunch</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Reservation Status</span>
+            <select id="reservation-status-input" name="reservation_status">
+              <option value="">All</option>
+              <option value="bookable">予約可能</option>
+              <option value="sold_out">空席なし</option>
+              <option value="booking_closed">受付終了</option>
+              <option value="not_supported">予約対象外</option>
+              <option value="provider_unlinked">未紐付け</option>
+              <option value="provider_error">取得失敗</option>
+              <option value="unknown">要確認</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Provider</span>
+            <select id="provider-input" name="provider">
+              <option value="">All</option>
+              <option value="example_provider">example_provider</option>
+            </select>
+          </label>
+        </div>
+
         <div class="button-row">
           <button type="submit">Search</button>
         </div>

@@ -58,6 +58,13 @@ body {
   gap: 6px;
 }
 
+.checkbox-accent-row {
+  padding: 8px 10px;
+  border: 1px solid rgba(156, 79, 47, 0.18);
+  border-radius: 12px;
+  background: rgba(156, 79, 47, 0.08);
+}
+
 .filters span,
 .checkbox-row span {
   font-size: 13px;
@@ -83,6 +90,20 @@ body {
   border: none;
   font-weight: 700;
   cursor: pointer;
+}
+
+.reservation-fields {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  transition: opacity 120ms ease;
+}
+
+.reservation-fields.is-disabled {
+  opacity: 0.52;
 }
 
 .status-panel {
@@ -152,9 +173,60 @@ body {
   font-size: 16px;
 }
 
+.result-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: start;
+}
+
 .result-button span,
 .result-button small {
   color: rgba(36, 29, 21, 0.74);
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.status-chip.small {
+  font-size: 10px;
+  padding: 3px 7px;
+}
+
+.is-bookable {
+  background: #d7ead2;
+  color: #205232;
+}
+
+.is-sold-out {
+  background: #f0d4cd;
+  color: #7c2d1e;
+}
+
+.is-booking-closed {
+  background: #eadfca;
+  color: #6d5324;
+}
+
+.is-not-supported,
+.is-unlinked {
+  background: #d7ddec;
+  color: #33486b;
+}
+
+.is-error,
+.is-unknown {
+  background: #e5d9ef;
+  color: #5b3c71;
 }
 
 .map-area {
@@ -171,6 +243,27 @@ body {
   gap: 8px;
 }
 
+.provider-list {
+  display: grid;
+  gap: 6px;
+}
+
+.provider-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.provider-name {
+  font-weight: 700;
+}
+
+.provider-slots {
+  color: rgba(36, 29, 21, 0.72);
+}
+
 .popup-genres {
   font-size: 12px;
   color: rgba(36, 29, 21, 0.75);
@@ -183,6 +276,43 @@ body {
 
 .popup-links a {
   color: var(--accent);
+}
+
+.map-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-pin span {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 8px rgba(36, 29, 21, 0.2);
+  background: #8d8d8d;
+}
+
+.map-pin.is-bookable span {
+  background: #4d8a58;
+}
+
+.map-pin.is-sold-out span {
+  background: #b95739;
+}
+
+.map-pin.is-booking-closed span {
+  background: #9f8042;
+}
+
+.map-pin.is-not-supported span,
+.map-pin.is-unlinked span {
+  background: #5c7299;
+}
+
+.map-pin.is-error span,
+.map-pin.is-unknown span {
+  background: #7d5b97;
 }
 
 @media (max-width: 960px) {
