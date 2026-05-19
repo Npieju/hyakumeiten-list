@@ -93,6 +93,20 @@ function statusClassForShop(shop) {
   return statusClassName(displayStatus(shop));
 }
 
+function statusMetaMarkup(shop) {
+  const status = displayStatus(shop);
+  if (!status) {
+    return `<div class="result-status-row"><span class="result-status-dot"></span><span class="result-status-text">静的検索結果</span></div>`;
+  }
+
+  return `
+    <div class="result-status-row ${statusClassName(status)}">
+      <span class="result-status-dot"></span>
+      <span class="result-status-text">${statusLabelForShop(shop)}</span>
+    </div>
+  `;
+}
+
 function currentFilterSummary() {
   const year = document.getElementById("year-input").value.trim();
   const genreSlug = document.getElementById("genre-input").value.trim();
@@ -280,6 +294,7 @@ function renderList(items) {
           <strong>${shop.name}</strong>
           ${reservationSummaryMarkup(shop)}
         </div>
+        ${statusMetaMarkup(shop)}
         <span>${shop.address}</span>
         <small>${shop.genres.map((genre) => genre.genre_slug).join(", ")}</small>
       </button>

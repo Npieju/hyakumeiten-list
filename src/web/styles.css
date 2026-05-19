@@ -206,6 +206,51 @@ body {
   font-size: 16px;
 }
 
+.result-status-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(36, 29, 21, 0.7);
+}
+
+.result-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(36, 29, 21, 0.16);
+  background: #8d8d8d;
+}
+
+.result-status-row.is-bookable .result-status-dot {
+  background: #4d8a58;
+}
+
+.result-status-row.is-sold-out .result-status-dot {
+  background: #b95739;
+}
+
+.result-status-row.is-booking-closed .result-status-dot {
+  background: #9f8042;
+}
+
+.result-status-row.is-not-supported .result-status-dot,
+.result-status-row.is-unlinked .result-status-dot {
+  background: #5c7299;
+}
+
+.result-status-row.is-error .result-status-dot,
+.result-status-row.is-unknown .result-status-dot {
+  background: #7d5b97;
+}
+
+.result-status-row.is-skipped .result-status-dot {
+  background: #b69a35;
+}
+
 .result-title-row {
   display: flex;
   justify-content: space-between;
