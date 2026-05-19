@@ -22,6 +22,8 @@ const sidebarToggle = document.getElementById("sidebar-toggle");
 const sidebarContent = document.getElementById("sidebar-content");
 const mapHudStatus = document.getElementById("map-hud-status");
 const mapHudFilters = document.getElementById("map-hud-filters");
+const mapLegend = document.getElementById("map-legend");
+const mapLegendPreview = document.getElementById("map-hud-legend-preview");
 const reservationEnabledInput = document.getElementById("reservation-enabled-input");
 const reservationFields = document.getElementById("reservation-fields");
 
@@ -54,6 +56,33 @@ const STATUS_CLASS_NAMES = {
   skipped: "is-skipped",
 };
 
+const STATUS_SYMBOLS = {
+  static: "•",
+  bookable: "O",
+  sold_out: "X",
+  booking_closed: "-",
+  temporarily_closed: "休",
+  not_supported: "外",
+  provider_unlinked: "未",
+  provider_error: "!",
+  unknown: "?",
+  skipped: "…",
+};
+
+const STATIC_LEGEND_ITEMS = [
+  { status: "static", label: "静的検索のみ" },
+];
+
+const RESERVATION_LEGEND_ITEMS = [
+  { status: "bookable", label: "予約可能" },
+  { status: "sold_out", label: "空席なし" },
+  { status: "booking_closed", label: "受付外" },
+  { status: "temporarily_closed", label: "休業" },
+  { status: "not_supported", label: "予約対象外" },
+  { status: "provider_unlinked", label: "未連携" },
+  { status: "skipped", label: "未評価" },
+];
+
 function reservationEnabled() {
   return reservationEnabledInput.checked;
 }
@@ -64,6 +93,10 @@ function statusLabel(status) {
 
 function statusClassName(status) {
   return STATUS_CLASS_NAMES[status] || "is-unknown";
+}
+
+function statusSymbol(status) {
+  return STATUS_SYMBOLS[status] || "?";
 }
 
 function summaryStatus(shop) {
@@ -141,6 +174,24 @@ function currentFilterSummary() {
 function updateMapHud(primary, secondary = currentFilterSummary()) {
   mapHudStatus.textContent = primary;
   mapHudFilters.textContent = secondary;
+}
+
+function legendItems() {
+  return reservationEnabled() ? RESERVATION_LEGEND_ITEMS : STATIC_LEGEND_ITEMS;
+}
+
+function legendItemMarkup(item) {
+  return `<span class="map-legend-item"><i class="map-legend-dot ${statusClassName(item.status)}"></i>${item.label}</span>`;
+}
+
+function legendPreviewMarkup(item) {
+  return `<i class="map-legend-dot ${statusClassName(item.status)}"></i>`;
+}
+
+function updateLegend() {
+  const items = legendItems();
+  mapLegend.innerHTML = items.map(legendItemMarkup).join("");
+  mapLegendPreview.innerHTML = items.slice(0, 4).map(legendPreviewMarkup).join("");
 }
 
 function buildParams() {
@@ -324,9 +375,9 @@ function renderMarkers(items) {
     const marker = L.marker([shop.latitude, shop.longitude], {
       icon: L.divIcon({
         className: `map-pin ${statusClassName(status)}`,
-        html: `<span></span>`,
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
+        html: `<span data-symbol="${statusSymbol(status)}"></span>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
       }),
     });
     marker.bindPopup(shopPopup(shop));
@@ -407,6 +458,7 @@ async function refresh() {
 
 function syncReservationFields() {
   reservationFields.classList.toggle("is-disabled", !reservationEnabled());
+  updateLegend();
 }
 
 function syncSidebarState() {
@@ -462,5 +514,6 @@ window.addEventListener("resize", syncSidebarForViewport);
 
 syncReservationFields();
 syncSidebarForViewport();
+updateLegend();
 updateMapHud("地図を読み込み中...", currentFilterSummary());
 refresh();
