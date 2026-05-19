@@ -23,6 +23,7 @@
 7. `data/<year>/by_region/*.csv`
 8. `data/all_years/all.csv`
 9. `data/all_years/by_region/*.csv`
+10. `data/all_years/by_genre/*.csv`
 
 ## Directory Layout
 
@@ -40,6 +41,7 @@
 
 1. `data/all_years/all.csv`: 全年度を `Website` 単位で 1 行にまとめた一覧
 2. `data/all_years/by_region/*.csv`: `data/all_years/all.csv` の地域別一覧
+3. `data/all_years/by_genre/*.csv`: `data/all_years/all.csv` の My Maps 向け genre 統合一覧
 
 ## Source Of Truth Rules
 
@@ -211,6 +213,21 @@ Warning:
 
 1. `Year` と `Genre` の位置対応は保証しない
 2. このファイル単独から年ごとの `shop_genres` を復元してはならない
+
+### `data/all_years/by_genre/*.csv`
+
+`data/all_years/all.csv` を、Google My Maps の layer 制限に合わせた最大 10 分類で再分割した派生物。
+
+Columns:
+
+1. `data/all_years/all.csv` と同一
+
+Rules:
+
+1. 同一系統の地域別 slug は同じファイルにまとめる
+2. 行の `Genre` / `Genre Slug` 自体は元の集計値を保持し、ファイル分割で分類を表す
+3. 分類定義は build script 側で固定し、未分類 slug が出たら生成を失敗させる
+4. 1 店舗が複数の統合 genre にまたがる場合は、該当する複数ファイルに入ってよい
 
 ## Regeneration Rules
 
