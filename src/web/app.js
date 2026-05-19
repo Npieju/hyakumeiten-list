@@ -63,7 +63,7 @@ const STATUS_SYMBOLS = {
   booking_closed: "-",
   temporarily_closed: "休",
   not_supported: "外",
-  provider_unlinked: "未",
+  provider_unlinked: "連",
   provider_error: "!",
   unknown: "?",
   skipped: "…",

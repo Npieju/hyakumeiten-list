@@ -544,7 +544,7 @@ body {
 }
 
 .map-legend-dot.is-unlinked::after {
-  content: "未";
+  content: "連";
 }
 
 .map-legend-dot.is-skipped {
