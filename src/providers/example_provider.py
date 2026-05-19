@@ -61,16 +61,28 @@ class ExampleProviderAdapter(ProviderAdapter):
 		party_size: int,
 		time_window: str,
 	) -> AvailabilityResult:
-		_ = (link, date, party_size, time_window)
+		provider_shop_id = str(link["provider_shop_id"] or "")
+		source = f"{provider_shop_id}:{date}:{party_size}:{time_window}"
+		bucket = int(hashlib.sha1(source.encode("utf-8")).hexdigest()[-1], 16) % 4
+		status_map = {
+			0: ("bookable", "slot_found", ["18:00", "19:30"]),
+			1: ("sold_out", "no_slot_found", []),
+			2: ("booking_closed", "outside_booking_window", []),
+			3: ("unknown", "example_provider_stub", []),
+		}
+		status, status_reason, available_slots = status_map[bucket]
+		reservation_url = None
+		if status == "bookable":
+			reservation_url = f"https://example.com/reserve/{provider_shop_id}"
 		return AvailabilityResult(
 			provider=self.name,
-			status="unknown",
-			status_reason="example_provider_noop",
-			reservation_url=None,
-			available_slots=[],
+			status=status,
+			status_reason=status_reason,
+			reservation_url=reservation_url,
+			available_slots=available_slots,
 			checked_at=utc_now_iso(),
 			expires_at=default_expires_at(),
-			raw_payload_hash=None,
+			raw_payload_hash="sha1:" + hashlib.sha1(source.encode("utf-8")).hexdigest(),
 		)
 
 
