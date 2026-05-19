@@ -183,3 +183,92 @@ API 単体で確認する場合:
 curl 'http://127.0.0.1:8000/health'
 curl 'http://127.0.0.1:8000/v1/shops/search?year=2025&genre_slug=sushi_tokyo&limit=3'
 ```
+
+## 予約サイト候補を自動紐付けする
+
+`example_provider` を使った matching pipeline の確認手順です。
+
+```bash
+python3 scripts/match_reservation_links.py --provider example_provider --limit 50
+python3 scripts/export_link_review_csv.py --provider example_provider
+```
+
+出力先:
+
+- `data/linkage/example_provider/review_candidates.csv`
+
+この段階では次が更新されます。
+
+- `reservation_links`
+- `link_review_queue`
+
+## review CSV を扱う
+
+候補 export:
+
+```bash
+python3 scripts/export_link_review_csv.py --provider example_provider --allow-empty
+```
+
+決定 import の schema 検証:
+
+```bash
+python3 scripts/import_link_review_csv.py --provider example_provider --input docs/examples/review_decisions.sample.csv --dry-run
+```
+
+CSV の列契約は [docs/reservation-link-review-spec.md](/home/yt/Projects/hyakummeiten-list/docs/reservation-link-review-spec.md) を参照してください。
+
+## 予約状態を CLI で確認する
+
+予約状態付き検索は CLI でも確認できます。
+
+```bash
+python3 scripts/check_availability.py --provider example_provider --date 2026-05-25 --party-size 2 --time-window dinner --year 2025 --genre-slug sushi_tokyo --limit 10
+```
+
+`--status bookable` のように status filter を付けられます。
+
+候補件数が広すぎる場合は `warning = live_check_limit_exceeded` が返り、未評価結果が混ざることを示します。
+
+## 予約状態を API で確認する
+
+予約状態付き検索 API:
+
+```bash
+curl -X POST 'http://127.0.0.1:8000/v1/shops/availability-search' \
+	-H 'content-type: application/json' \
+	-d '{
+		"filters": {"year": [2025], "genre_slug": ["sushi_tokyo"]},
+		"reservation": {
+			"date": "2026-05-25",
+			"party_size": 2,
+			"time_window": "dinner",
+			"status": ["bookable"],
+			"provider": ["example_provider"]
+		},
+		"limit": 10,
+		"offset": 0
+	}'
+```
+
+レスポンスには次が含まれます。
+
+- `total`
+- `cache_hit_ratio`
+- `live_checks`
+- `warning`
+- `items`
+
+## 現在の rebuild / verify 順序
+
+検索マスタから予約検索までを通す最小手順:
+
+```bash
+python3 scripts/build_shop_master.py
+python3 scripts/validate_shop_master.py
+python3 scripts/match_reservation_links.py --provider example_provider --limit 50
+python3 scripts/check_availability.py --provider example_provider --date 2026-05-25 --party-size 2 --time-window dinner --year 2025 --genre-slug sushi_tokyo --limit 10
+python3 -m src.api.app
+```
+
+運用確認項目は [docs/acceptance-checklist.md](/home/yt/Projects/hyakummeiten-list/docs/acceptance-checklist.md) にまとめています。
