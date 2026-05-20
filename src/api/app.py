@@ -115,7 +115,7 @@ def shops_availability_search(request: AvailabilitySearchRequest) -> dict[str, o
 
 
 def main() -> None:
-	host = os.environ.get("HOST", "127.0.0.1")
+	host = os.environ.get("HOST", "0.0.0.0")
 	port = int(os.environ.get("PORT", "8000"))
 	uvicorn.run("src.api.app:app", host=host, port=port, reload=False)
 
