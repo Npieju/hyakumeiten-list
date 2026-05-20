@@ -238,16 +238,17 @@ Rules:
 
 Directories:
 
-1. `data/all_years/for_mymap/lunch/`
-2. `data/all_years/for_mymap/dinner/`
-3. `data/all_years/for_mymap/snack/`
+1. `data/all_years/for_mymap/casual_lunch/`
+2. `data/all_years/for_mymap/washoku_izakaya/`
+3. `data/all_years/for_mymap/dinner_restaurants/`
+4. `data/all_years/for_mymap/cafe_sweets/`
 
 Rules:
 
 1. 各 directory のファイル数は 10 以下に抑える
-2. 同じジャンルの地域別 slug は同じファイルにまとめてよい
-3. 余計な圧縮は避け、似ていない genre を無理に同居させない
-4. 同じ店舗が複数の用途別ファイルに現れてよい
+2. 元になる `data/all_years/by_genre/*.csv` をそのまま map 単位に振り分ける
+3. genre 自体の圧縮はしない
+4. 同じ店舗が複数の genre に属する場合は、対応する複数ファイルに現れてよい
 
 ## Regeneration Rules
 

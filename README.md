@@ -112,7 +112,7 @@ python3 scripts/build_all_years_csv.py
 
 基準出力として `data/all_years/by_genre/*.csv` も作ります。ここでは地域違いの slug だけをまとめ、異なる料理ジャンルは混ぜません。
 
-Google My Maps の 10 layer 制限に合わせて、`data/all_years/for_mymap/` 配下に `lunch` / `dinner` / `snack` の directory を出力します。各 directory は 10 以下の CSV に抑えつつ、余計な圧縮は避けて、同じジャンルの地域違いだけを主にまとめます。
+Google My Maps 用には、`data/all_years/by_genre/*.csv` をそのまま 4 つの map directory に振り分けた `data/all_years/for_mymap/` も出力します。genre 自体の圧縮はせず、1 map あたり 10 layer 以下に収めます。
 
 出力先:
 
@@ -124,9 +124,10 @@ Google My Maps の 10 layer 制限に合わせて、`data/all_years/for_mymap/` 
 - `data/all_years/by_region/kansai.csv`
 - `data/all_years/by_region/chugoku_shikoku_kyushu.csv`
 - `data/all_years/by_region/unknown.csv`
-- `data/all_years/for_mymap/lunch/*.csv`
-- `data/all_years/for_mymap/dinner/*.csv`
-- `data/all_years/for_mymap/snack/*.csv`
+- `data/all_years/for_mymap/casual_lunch/*.csv`
+- `data/all_years/for_mymap/washoku_izakaya/*.csv`
+- `data/all_years/for_mymap/dinner_restaurants/*.csv`
+- `data/all_years/for_mymap/cafe_sweets/*.csv`
 
 ## 予約検索向けの検索マスタを作る
 
