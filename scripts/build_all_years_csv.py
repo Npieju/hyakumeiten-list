@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from build_region_csv import PREFECTURE_TO_REGION, REGION_LABELS, extract_prefecture
+from shop_data_overrides import apply_row_overrides
 
 
 MULTI_VALUE_SEPARATOR = " | "
@@ -252,6 +253,7 @@ def main() -> None:
 
             for row in reader:
                 row = sanitize_row(row)
+                row = apply_row_overrides(row)
                 website = row.get("Website", "").strip()
                 if not website:
                     raise SystemExit(f"Missing Website in {source_path}: {row}")

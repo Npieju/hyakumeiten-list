@@ -37,6 +37,8 @@ python3 scripts/scrape_hyakumeiten.py --year 2025 --genres-only
 python3 scripts/scrape_hyakumeiten.py --year 2025 --throttle-seconds 0 --workers 4
 ```
 
+既知の欠損・移転ページには抽出時 override を当てます。たとえば `百名店 2019` の `ete` は、旧 URL / 旧住所のままだと `東京都渋谷区` と `0,0` が返るため、抽出時に移転後の URL `https://tabelog.com/tokyo/A1318/A131811/13249143/` と住所 `東京都渋谷区西原3-23-1` に置換します。
+
 出力先:
 
 - `data/2025/genres.csv`

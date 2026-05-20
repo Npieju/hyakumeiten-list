@@ -11,6 +11,7 @@ from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 from build_region_csv import PREFECTURE_TO_REGION, extract_prefecture
+from shop_data_overrides import apply_row_overrides
 
 
 SCHEMA_VERSION = "1"
@@ -207,6 +208,7 @@ def build_shop_records(
 	reservation_links: dict[tuple[str, str], dict[str, str | float | None]] = {}
 
 	for fallback_year, row in source_rows:
+		row = apply_row_overrides(row)
 		tabelog_url = canonicalize_tabelog_url(row.get("Website", ""))
 		if not tabelog_url:
 			raise SystemExit(f"Missing Website: {row}")

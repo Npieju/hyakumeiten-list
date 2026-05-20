@@ -4,6 +4,8 @@ import argparse
 import csv
 from pathlib import Path
 
+from shop_data_overrides import apply_row_overrides
+
 
 PREFECTURE_TO_REGION = {
     "北海道": "tohoku_hokkaido",
@@ -105,6 +107,7 @@ def main() -> None:
                 fieldnames = reader.fieldnames
 
             for row in reader:
+                row = apply_row_overrides(row)
                 all_rows.append(row)
                 prefecture = extract_prefecture(row.get("Address", ""))
                 region_slug = (

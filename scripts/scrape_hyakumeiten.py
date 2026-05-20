@@ -16,6 +16,8 @@ from urllib.parse import quote, urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
+from shop_data_overrides import apply_row_overrides
+
 
 BASE_URL = "https://award.tabelog.com"
 HYAKUMEITEN_ROOT = f"{BASE_URL}/hyakumeiten"
@@ -366,6 +368,25 @@ def build_google_maps_url(address: str, name: str) -> str:
     return f"https://www.google.com/maps/search/?api=1&query={query}"
 
 
+def apply_shop_overrides(
+    name: str,
+    address: str,
+    website: str,
+    latitude: str,
+    longitude: str,
+) -> dict[str, str]:
+    return apply_row_overrides(
+        {
+            "Name": name,
+            "Address": address,
+            "Website": website,
+            "Google Maps URL": build_google_maps_url(address, name),
+            "Latitude": latitude,
+            "Longitude": longitude,
+        }
+    )
+
+
 def normalize_shop_url(url: str) -> str | None:
     parsed = urlparse(urljoin(BASE_URL, url))
     if parsed.netloc != "tabelog.com":
@@ -424,19 +445,23 @@ def fetch_shop(
         if status_code == 404:
             print_progress(f"including unavailable shop page as fallback row: {shop_link.url}")
             latitude, longitude = COORDINATE_OVERRIDES.get(shop_link.url, ("", ""))
+            overridden_row = apply_shop_overrides(
+                shop_link.listed_name,
+                ADDRESS_OVERRIDES.get(shop_link.url, ""),
+                shop_link.url,
+                format_coordinate(latitude),
+                format_coordinate(longitude),
+            )
             return (
                 Shop(
-                    name=shop_link.listed_name,
-                    address=ADDRESS_OVERRIDES.get(shop_link.url, ""),
+                    name=overridden_row["Name"],
+                    address=overridden_row["Address"],
                     description=f"食べログ {genre.title} 百名店 {genre.year}",
-                    website=shop_link.url,
+                    website=overridden_row["Website"],
                     tabelog_reservation_url="",
-                    google_maps_url=build_google_maps_url(
-                        ADDRESS_OVERRIDES.get(shop_link.url, shop_link.listed_area),
-                        shop_link.listed_name,
-                    ),
-                    latitude=format_coordinate(latitude),
-                    longitude=format_coordinate(longitude),
+                    google_maps_url=overridden_row["Google Maps URL"],
+                    latitude=overridden_row["Latitude"],
+                    longitude=overridden_row["Longitude"],
                     year=genre.year,
                     genre=genre.title,
                     genre_slug=genre.slug,
@@ -469,18 +494,25 @@ def fetch_shop(
     latitude = format_coordinate(override_latitude or latitude)
     longitude = format_coordinate(override_longitude or longitude)
     tabelog_reservation_url = parse_tabelog_reservation_url(shop_link.url, soup)
+    overridden_row = apply_shop_overrides(
+        name,
+        address,
+        shop_link.url,
+        latitude,
+        longitude,
+    )
 
     description = f"食べログ {genre.title} 百名店 {genre.year}"
     return (
         Shop(
-            name=name,
-            address=address,
+            name=overridden_row["Name"],
+            address=overridden_row["Address"],
             description=description,
-            website=shop_link.url,
+            website=overridden_row["Website"],
             tabelog_reservation_url=tabelog_reservation_url,
-            google_maps_url=build_google_maps_url(address, name),
-            latitude=latitude,
-            longitude=longitude,
+            google_maps_url=overridden_row["Google Maps URL"],
+            latitude=overridden_row["Latitude"],
+            longitude=overridden_row["Longitude"],
             year=genre.year,
             genre=genre.title,
             genre_slug=genre.slug,
