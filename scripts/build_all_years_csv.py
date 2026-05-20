@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import re
 from pathlib import Path
 
 from build_region_csv import PREFECTURE_TO_REGION, REGION_LABELS, extract_prefecture
@@ -89,6 +90,17 @@ def split_multi_value(value: str) -> list[str]:
     if not cleaned:
         return []
     return [part.strip() for part in cleaned.split(MULTI_VALUE_SEPARATOR) if part.strip()]
+
+
+def sanitize_cell(value: str) -> str:
+    return re.sub(r"[\s\x00-\x1f]*[\r\n\u2028\u2029]+[\s\x00-\x1f]*", " ", value).strip()
+
+
+def sanitize_row(row: dict[str, str | None]) -> dict[str, str]:
+    return {
+        key: sanitize_cell(value) if value is not None else ""
+        for key, value in row.items()
+    }
 
 
 def join_multi_value(values: list[str]) -> str:
@@ -239,6 +251,7 @@ def main() -> None:
                 )
 
             for row in reader:
+                row = sanitize_row(row)
                 website = row.get("Website", "").strip()
                 if not website:
                     raise SystemExit(f"Missing Website in {source_path}: {row}")
