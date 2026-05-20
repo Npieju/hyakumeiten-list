@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: hyakummeiten-map
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python scripts/build_shop_master.py
+    startCommand: python -m src.api.app
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4

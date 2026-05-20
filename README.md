@@ -13,6 +13,31 @@ CSV データの仕様は [docs/csv-data-spec.md](/home/yt/Projects/hyakummeiten
 
 現状は `2025` 年を対象にしています。
 
+## 無料公開
+
+現状の構成では、公開先の第一候補は `Render Free Web Service` です。
+
+理由:
+
+- FastAPI をそのまま載せられる
+- GitHub 連携だけで deploy できる
+- クレジットカード前提の設定を避けやすい
+- SQLite 検索 DB は deploy 時に `scripts/build_shop_master.py` で再生成できる
+
+この repo には Render 用の [render.yaml](/home/yt/Projects/hyakummeiten-list/render.yaml) を同梱しています。Render で repo を import すると、次の設定でそのまま起動できます。
+
+- build: `pip install -r requirements.txt && python scripts/build_shop_master.py`
+- start: `python -m src.api.app`
+- health check: `/health`
+
+制約:
+
+- Free Web Service は 15 分 idle で sleep する
+- Free Web Service の filesystem は永続化されない
+- そのため availability cache のような runtime 書き込みは restart ごとに消える
+
+ただし、この app の検索マスタ SQLite は deploy 時に約 1.3 秒で再生成でき、サイズも約 13 MB なので、無料公開の用途では十分現実的です。
+
 ## セットアップ
 
 ```bash
