@@ -1,5 +1,7 @@
 # hyakumeiten-list
 
+公開 URL: https://hyakummeiten-map.onrender.com
+
 食べログ 百名店を年別・ジャンル別の CSV に整形して、Google My Maps に取り込みやすくするためのスクレイパーです。
 
 同じ repo の中で、予約検索向けの検索マスタ実装も進めます。別 repo に切らず、既存の `data/` と `scripts/` を土台に段階的に追加する方針です。
@@ -211,7 +213,10 @@ PORT=8001 python3 -m src.api.app
 - Leaflet ベースの地図表示
 - 現在 viewport に対する bounding box 検索
 - 店舗一覧と marker の同期表示
-- `Genre Slug`、年、地域、店名、複数年掲載の filter
+- 年、店名、正規化済みジャンルの filter
+- `検索`、`営業確認`、`予約可能店舗検索` の 3 段階操作
+- `営業 / 休業日 / 情報なし` と `予約可能 / 空席なし / 受付外` の段階別表示
+- 複数年掲載店を marker 上の小さな装飾で表示
 
 API 単体で確認する場合:
 
@@ -222,16 +227,16 @@ curl 'http://127.0.0.1:8000/v1/shops/search?year=2025&genre_slug=sushi_tokyo&lim
 
 ## 予約サイト候補を自動紐付けする
 
-`example_provider` を使った matching pipeline の確認手順です。
+provider adapter 向けの matching pipeline 確認手順です。`--provider` には [src/providers/registry.py](/home/yt/Projects/hyakummeiten-list/src/providers/registry.py) に登録されている provider 名を指定します。
 
 ```bash
-python3 scripts/match_reservation_links.py --provider example_provider --limit 50
-python3 scripts/export_link_review_csv.py --provider example_provider
+python3 scripts/match_reservation_links.py --provider <provider> --limit 50
+python3 scripts/export_link_review_csv.py --provider <provider>
 ```
 
 出力先:
 
-- `data/linkage/example_provider/review_candidates.csv`
+- `data/linkage/<provider>/review_candidates.csv`
 
 この段階では次が更新されます。
 
@@ -243,13 +248,13 @@ python3 scripts/export_link_review_csv.py --provider example_provider
 候補 export:
 
 ```bash
-python3 scripts/export_link_review_csv.py --provider example_provider --allow-empty
+python3 scripts/export_link_review_csv.py --provider <provider> --allow-empty
 ```
 
 決定 import の schema 検証:
 
 ```bash
-python3 scripts/import_link_review_csv.py --provider example_provider --input docs/examples/review_decisions.sample.csv --dry-run
+python3 scripts/import_link_review_csv.py --provider <provider> --input docs/examples/review_decisions.sample.csv --dry-run
 ```
 
 CSV の列契約は [docs/reservation-link-review-spec.md](/home/yt/Projects/hyakummeiten-list/docs/reservation-link-review-spec.md) を参照してください。
@@ -259,7 +264,7 @@ CSV の列契約は [docs/reservation-link-review-spec.md](/home/yt/Projects/hya
 予約状態付き検索は CLI でも確認できます。
 
 ```bash
-python3 scripts/check_availability.py --provider example_provider --date 2026-05-25 --party-size 2 --time-window dinner --year 2025 --genre-slug sushi_tokyo --limit 10
+python3 scripts/check_availability.py --provider tabelog --date 2026-05-25 --party-size 2 --time-window dinner --year 2025 --genre-slug sushi_tokyo --limit 10
 ```
 
 `--status bookable` のように status filter を付けられます。
@@ -280,7 +285,7 @@ curl -X POST 'http://127.0.0.1:8000/v1/shops/availability-search' \
 			"party_size": 2,
 			"time_window": "dinner",
 			"status": ["bookable"],
-			"provider": ["example_provider"]
+			"provider": ["tabelog"]
 		},
 		"limit": 10,
 		"offset": 0
@@ -302,8 +307,7 @@ curl -X POST 'http://127.0.0.1:8000/v1/shops/availability-search' \
 ```bash
 python3 scripts/build_shop_master.py
 python3 scripts/validate_shop_master.py
-python3 scripts/match_reservation_links.py --provider example_provider --limit 50
-python3 scripts/check_availability.py --provider example_provider --date 2026-05-25 --party-size 2 --time-window dinner --year 2025 --genre-slug sushi_tokyo --limit 10
+python3 scripts/check_availability.py --provider tabelog --date 2026-05-25 --party-size 2 --time-window dinner --year 2025 --genre-slug sushi_tokyo --limit 10
 python3 -m src.api.app
 ```
 
