@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.api.availability import ReservationQuery, search_availability
+from src.api.genres import list_genre_filters
 from src.api.models import AvailabilitySearchRequest, AvailabilitySearchResponse, SearchResponse
 from src.api.search import SearchFilters, search_shops
 
@@ -28,7 +29,19 @@ def health() -> dict[str, str]:
 
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
-	return FileResponse(WEB_DIR / "index.html")
+	return FileResponse(
+		WEB_DIR / "index.html",
+		headers={
+			"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+			"Pragma": "no-cache",
+			"Expires": "0",
+		},
+	)
+
+
+@app.get("/v1/metadata/genres")
+def genres_metadata(db_path: str = "data/app/hyakummeiten.sqlite3") -> dict[str, object]:
+	return list_genre_filters(db_path=db_path)
 
 
 @app.get("/v1/shops/search", response_model=SearchResponse)

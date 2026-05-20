@@ -6,77 +6,76 @@
   <title>Hyakumeiten Map</title>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/styles.css?v=20260520g">
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
-      <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-expanded="true" aria-controls="sidebar-content">Filters</button>
+      <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-expanded="true" aria-controls="sidebar-content">絞り込み</button>
       <div id="sidebar-content" class="sidebar-content">
-      <div class="panel-header">
-        <h1>Hyakumeiten Map</h1>
-        <p>百名店を地図と一覧で横断検索</p>
-      </div>
-
       <form id="search-form" class="filters">
-        <label>
-          <span>Year</span>
-          <input id="year-input" name="year" type="number" value="2025" min="2017" max="2025">
-        </label>
-
-        <label>
-          <span>Genre Slug</span>
-          <input id="genre-input" name="genre_slug" type="text" placeholder="sushi_tokyo">
-        </label>
-
-        <label>
-          <span>Name</span>
-          <input id="name-input" name="name_query" type="text" placeholder="鮨">
-        </label>
-
-        <label>
-          <span>Region</span>
-          <select id="region-input" name="region">
-            <option value="">All</option>
-            <option value="tohoku_hokkaido">東北北海道</option>
-            <option value="kanto">関東</option>
-            <option value="chubu">中部</option>
-            <option value="kansai">関西</option>
-            <option value="chugoku_shikoku_kyushu">中国四国九州</option>
+        <label class="field field-year">
+          <span>年</span>
+          <select id="year-input" name="year">
+            <option value="" selected>All</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+            <option value="2021">2021</option>
+            <option value="2020">2020</option>
+            <option value="2019">2019</option>
+            <option value="2018">2018</option>
+            <option value="2017">2017</option>
           </select>
         </label>
 
-        <label class="checkbox-row">
-          <input id="multiple-years-input" name="has_multiple_years" type="checkbox">
-          <span>複数年掲載のみ</span>
+        <label class="field field-genre">
+          <span>ジャンル</span>
+          <details id="genre-picker" class="genre-picker">
+            <summary id="genre-picker-summary" class="genre-picker-summary">All</summary>
+            <div class="genre-picker-panel">
+              <div class="genre-picker-actions">
+                <button id="genre-toggle-all" class="field-mini-button" type="button">全選択</button>
+              </div>
+              <div id="genre-toggle-group" class="genre-option-list" role="group" aria-label="Genre filters"></div>
+            </div>
+          </details>
         </label>
 
-        <label class="checkbox-row checkbox-accent-row">
-          <input id="reservation-enabled-input" name="reservation_enabled" type="checkbox">
-          <span>予約状態を取得する</span>
+        <label class="field field-name">
+          <span>店名</span>
+          <input id="name-input" name="name_query" type="text" placeholder="鮨">
         </label>
 
-        <div id="reservation-fields" class="reservation-fields is-disabled">
-          <label>
-            <span>Date</span>
+        <div class="button-row button-row-primary field field-actions">
+          <button type="submit" class="search-mode-button is-active" data-search-mode="static">検索</button>
+          <button type="submit" class="search-mode-button" data-search-mode="business">営業確認</button>
+        </div>
+
+        <div class="reservation-query-heading field field-reservation-query-heading">予約用クエリ</div>
+
+        <div id="reservation-fields" class="reservation-fields">
+          <label class="field field-date">
+            <span>日付</span>
             <input id="reservation-date-input" name="reservation_date" type="date" value="2026-05-25">
           </label>
 
-          <label>
-            <span>Party Size</span>
+          <label class="field field-party-size reservation-detail-field">
+            <span>人数</span>
             <input id="party-size-input" name="party_size" type="number" min="1" max="12" value="2">
           </label>
 
-          <label>
-            <span>Time Window</span>
+          <label class="field field-time-window reservation-detail-field">
+            <span>時間帯</span>
             <select id="time-window-input" name="time_window">
-              <option value="dinner">Dinner</option>
-              <option value="lunch">Lunch</option>
+              <option value="dinner">夕食</option>
+              <option value="lunch">昼食</option>
             </select>
           </label>
 
-          <label>
-            <span>営業・予約状態</span>
+          <label class="field field-reservation-status reservation-detail-field">
+            <span>予約状態</span>
             <select id="reservation-status-input" name="reservation_status">
               <option value="">All</option>
               <option value="bookable">予約可能</option>
@@ -90,8 +89,8 @@
             </select>
           </label>
 
-          <label>
-            <span>Provider</span>
+          <label class="field field-provider reservation-detail-field">
+            <span>サイト</span>
             <select id="provider-input" name="provider">
               <option value="">All</option>
               <option value="tabelog">tabelog</option>
@@ -99,8 +98,8 @@
           </label>
         </div>
 
-        <div class="button-row">
-          <button type="submit">Search</button>
+        <div class="button-row button-row-reservation field field-submit">
+          <button type="submit" class="search-mode-button search-mode-button-reservation" data-search-mode="reservation">予約可能店舗検索</button>
         </div>
       </form>
 
@@ -125,7 +124,7 @@
         <div class="map-hud-card map-hud-card-primary">
           <div class="map-hud-label">Map View</div>
           <div id="map-hud-status" class="map-hud-status">地図を読み込み中...</div>
-          <div id="map-hud-filters" class="map-hud-filters">Year 2025</div>
+          <div id="map-hud-filters" class="map-hud-filters">Viewport search</div>
         </div>
         <details class="map-hud-card map-hud-card-legend map-hud-legend">
           <summary class="map-hud-legend-toggle">
@@ -141,6 +140,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script type="module" src="/static/app.js"></script>
+  <script type="module" src="/static/app.js?v=20260520g"></script>
 </body>
 </html>
